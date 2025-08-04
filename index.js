@@ -22,7 +22,7 @@ const multer = require("multer");
 const path = require("path");
 const { url } = require("inspector");
 const axios = require("axios");
-
+app.use(express.json());
 // Cấu hình Multer để lưu tệp vào thư mục 'uploads'
 const storage = multer.diskStorage({
   destination: function (req, file, callback) {
