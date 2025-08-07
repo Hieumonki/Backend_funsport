@@ -7,3 +7,7 @@ const contactSchema = new mongoose.Schema({
   message: String,
   createdAt: { type: Date, default: Date.now }
 });
+
+const Contact = mongoose.model('Contact', contactSchema);
+
+module.exports = Contact;
