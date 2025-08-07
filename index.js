@@ -14,8 +14,11 @@ const userRouter = require("./routes/user");
 const categoryRouter = require("./routes/category");
 const productRouter = require("./routes/product");
 const statsRouter = require('./routes/stats');
+const newsRoutes = require('./routes/news.routes');
 const orderRoutes = require('./routes/order.routes');
 const bestSellerRoute = require('./routes/bestseller');
+const contactRouter = require('./routes/contact');
+
 
 // addimage
 const multer = require("multer");
@@ -71,7 +74,9 @@ app.use("/v1/product", productRouter);
 app.use("/v1/productsell", productsellRouter);
 app.use('/v1/stats', statsRouter);
 app.use('/v1/orders', orderRoutes);
-
+app.use('/v1/news', newsRoutes);
+app.use('/v1/contact', contactRouter);
+app.use('/v1/bestseller', bestSellerRoute);
 
 categoryRouter
 app.listen(8000, () => {
@@ -207,6 +212,5 @@ app.post("/payment-notify", express.json(), async (req, res) => {
 });
 
 
-const newsRoutes = require('./routes/news.routes');
-app.use('/v1/news', newsRoutes);
-app.use('/v1/bestseller', bestSellerRoute);
+
+
