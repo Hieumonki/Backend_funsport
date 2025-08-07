@@ -1,4 +1,4 @@
-const { theme, author, category } = require("../model/model");
+const { theme, author, category } = require("../model/category");
 
 const categoryCon = {
   // Thêm danh mục
