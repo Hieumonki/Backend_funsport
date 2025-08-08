@@ -9,4 +9,7 @@ const newsSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.models.news || mongoose.model("news", newsSchema);
+// Fix OverwriteModelError
+const NewsModel = mongoose.models.news || mongoose.model("news", newsSchema);
+
+module.exports = { news: NewsModel }; // export object có key news
