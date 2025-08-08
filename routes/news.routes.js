@@ -12,6 +12,19 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET bài viết theo ID
+router.get("/:id", async (req, res) => {
+  try {
+    const foundNews = await news.findById(req.params.id);
+    if (!foundNews) {
+      return res.status(404).json({ message: "Not found" });
+    }
+    res.json(foundNews);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // POST tạo tin mới
 router.post("/", async (req, res) => {
   try {
