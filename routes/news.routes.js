@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { news } = require("../model/model");
+const { news } = require("../model/new");
 
 // GET tất cả bài viết tin tức
 router.get("/", async (req, res) => {
