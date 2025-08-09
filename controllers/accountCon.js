@@ -42,16 +42,15 @@ const accountCon = {
         return res.status(400).json({ message: "Tên tài khoản đã tồn tại" });
       }
 
-      // Kiểm tra trùng email
-      const existingEmail = await account.findOne({ email });
+      const existingEmail = await account.findOne({ email: req.body.email });
       if (existingEmail) {
-        return res.status(400).json({ message: "Email đã được sử dụng" });
+        return res.status(400).json({ message: "Email đã tồn tại" });
       }
 
-      // Kiểm tra trùng số điện thoại
-      const existingPhone = await account.findOne({ phone });
+      // Kiểm tra số điện thoại trùng
+      const existingPhone = await account.findOne({ phone: req.body.phone });
       if (existingPhone) {
-        return res.status(400).json({ message: "Số điện thoại đã được sử dụng" });
+        return res.status(400).json({ message: "Số điện thoại đã tồn tại" });
       }
 
       // Mã hóa mật khẩu
