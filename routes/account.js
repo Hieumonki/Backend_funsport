@@ -1,6 +1,8 @@
-// controllers/accountCon.js
-const Account = require("../model/model"); // Model mongoose
 
+const router = require("express").Router();
+const accountCon = require("../controllers/accountCon");
+const middlewareCon = require("../controllers/middlewareCon");
+const upload = require("../middlewares/upload"); 
 const accountCon = {
   // Đăng ký tài khoản
   addAccount: async (req, res) => {
@@ -95,4 +97,4 @@ const accountCon = {
   }
 };
 
-module.exports = accountCon;
+module.exports = router;
