@@ -29,23 +29,46 @@ const accountCon = {
     );
   },
 
-  // Đăng ký tài khoản (mã hoá mật khẩu)
+  // Đăng ký tài khoản (mã hoá mật khẩu + kiểm tra trùng)
   addAccount: async (req, res) => {
     try {
-      console.log("Dữ liệu gửi đến:", req.body);
+      console.log("📩 Dữ liệu gửi đến:", req.body);
 
+      const { name, email, phone, password } = req.body;
+
+      // Kiểm tra trùng tên
+      const existingName = await account.findOne({ name });
+      if (existingName) {
+        return res.status(400).json({ message: "Tên tài khoản đã tồn tại" });
+      }
+
+      // Kiểm tra trùng email
+      const existingEmail = await account.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email đã được sử dụng" });
+      }
+
+      // Kiểm tra trùng số điện thoại
+      const existingPhone = await account.findOne({ phone });
+      if (existingPhone) {
+        return res.status(400).json({ message: "Số điện thoại đã được sử dụng" });
+      }
+
+      // Mã hóa mật khẩu
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(req.body.password, salt);
+      const hashedPassword = await bcrypt.hash(password, salt);
 
       const newAccount = new account({
-        ...req.body,
+        name,
+        email,
+        phone,
         password: hashedPassword
       });
 
       const savedAccount = await newAccount.save();
-      console.log("Lưu thành công:", savedAccount);
+      console.log("✅ Lưu thành công:", savedAccount);
 
-      res.status(200).json(savedAccount);
+      res.status(201).json(savedAccount);
     } catch (error) {
       console.error("❌ Lỗi khi lưu tài khoản:", error);
       res.status(500).json({ message: "Lỗi server", error });
@@ -53,39 +76,37 @@ const accountCon = {
   },
 
   // Đăng nhập
-login: async (req, res) => {
-  try {
-    const user = await account.findOne({ name: req.body.name });
-    if (!user) {
-      return res.status(404).json("Sai tên đăng nhập");
+  login: async (req, res) => {
+    try {
+      const user = await account.findOne({ name: req.body.name });
+      if (!user) {
+        return res.status(404).json("Sai tên đăng nhập");
+      }
+
+      // So sánh mật khẩu đã mã hoá
+      const validPassword = await bcrypt.compare(req.body.password, user.password);
+      if (!validPassword) {
+        return res.status(403).json("Sai mật khẩu");
+      }
+
+      const accessToken = accountCon.creareToken(user);
+      const refreshToken = accountCon.creareRefreshToken(user);
+      refreshTokens.push(refreshToken);
+
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: false,
+        path: "/",
+        sameSite: "strict"
+      });
+
+      const { password, ...others } = user._doc;
+      res.status(200).json({ ...others, accessToken, refreshToken });
+    } catch (error) {
+      console.error("❌ Lỗi đăng nhập:", error);
+      res.status(500).json({ message: "Lỗi đăng nhập", error: error.message });
     }
-
-    // ✅ So sánh mật khẩu đã mã hoá
-    const validPassword = await bcrypt.compare(req.body.password, user.password);
-    if (!validPassword) {
-      return res.status(403).json("Sai mật khẩu");
-    }
-
-    const accessToken = accountCon.creareToken(user);
-    const refreshToken = accountCon.creareRefreshToken(user);
-    refreshTokens.push(refreshToken);
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: false,
-      path: "/",
-      sameSite: "strict"
-    });
-
-    const { password, ...others } = user._doc;
-    res.status(200).json({ ...others, accessToken, refreshToken });
-  } catch (error) {
-    console.error("❌ Lỗi đăng nhập:", error);
-    res.status(500).json({ message: "Lỗi đăng nhập", error: error.message });
-  }
-},
-
-
+  },
 
   // Cấp lại token khi hết hạn
   requestRefreshToken: async (req, res) => {
@@ -95,7 +116,7 @@ login: async (req, res) => {
       return res.status(403).json("Token không hợp lệ");
     }
 
-    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN, (err, user) => {
       if (err) {
         console.error(err);
         return res.status(403).json("Lỗi xác thực token");
