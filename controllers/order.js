@@ -71,3 +71,6 @@ exports.updateOrder = async (req, res) => {
     res.status(500).json({ message: 'Lỗi: ' + err.message });
   }
 };
+
+
+module.exports = Order;
