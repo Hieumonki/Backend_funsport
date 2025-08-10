@@ -21,7 +21,7 @@ const productSchema = new mongoose.Schema({
     trim: true,
   },
   desc: String,
-  category: String,
+  category: { type: mongoose.Schema.Types.ObjectId, ref: "category" },
   image: String,
   price: Number,
   tab: String,
@@ -121,7 +121,7 @@ const accountSchema = new mongoose.Schema({
 
   avatar: { type: String, default: "" },
 
-  
+
   admin: {
     type: Boolean,
     default: false,
@@ -218,7 +218,7 @@ statsSchema.plugin(mongoosePaginate);
 
 
 // ===== Best Seller =====
- const bestSellerSchema = new mongoose.Schema({
+const bestSellerSchema = new mongoose.Schema({
   name: String,
   image: String,
   price: Number,
