@@ -21,29 +21,33 @@ const productCon = {
       res.status(500).json(error);
     }
   },
-  getAllproduct: async (req, res) => {
-    try {
-      const { keyword, category } = req.query;
-      const limit = parseInt(req.query.limit) || 50;
+getAllproduct: async (req, res) => {
+  try {
+    const { keyword, category } = req.query;
+    const limit = parseInt(req.query.limit) || 50;
 
-      const queries = {};
+    const queries = {};
 
-      if (keyword) {
-        queries.name = { $regex: new RegExp(keyword, 'i') }; // không phân biệt hoa thường
-      }
-
-      if (category) {
-        queries.category = category;
-      }
-
-      const products = await product.find(queries).limit(limit);
-
-      res.status(200).json(products);
-    } catch (error) {
-      console.error('Lỗi lấy sản phẩm:', error);
-      res.status(500).json({ message: 'Lỗi server' });
+    if (keyword) {
+      queries.name = { $regex: new RegExp(keyword, 'i') };
     }
-  },
+
+    if (category) {
+      queries.category = category;
+    }
+
+    // Thêm populate để lấy tên category
+    const productsList = await product.find(queries)
+      .limit(limit)
+      .populate('category', 'name'); // lấy trường name của category
+
+    res.status(200).json(productsList);
+  } catch (error) {
+    console.error('Lỗi lấy sản phẩm:', error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+},
+
 
 
   getAnproduct: async (req, res) => {
