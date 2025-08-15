@@ -100,7 +100,7 @@ app.post("/payment", async (req, res) => {
   const crypto = require('crypto');
   const https = require('https');
 
-  const { amount, cart, customerInfo, redirectUrl: redirectFE } = req.body; // lấy từ FE
+  const { amount, cart, customerInfo, redirectUrl: redirectFE } = req.body;
 
   const accessKey = 'F8BBA842ECF85';
   const secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
@@ -109,12 +109,12 @@ app.post("/payment", async (req, res) => {
   const requestType = "payWithMethod";
   const orderId = partnerCode + new Date().getTime();
   const requestId = orderId;
-  const extraData = '';
+  const extraData = JSON.stringify({ cart, customerInfo }); 
   const orderGroupId = '';
   const autoCapture = true;
   const lang = 'vi';
 
-  const redirectUrl = `${redirectFE || process.env.FRONTEND_URL}/payment-success`; // FE có thể gửi redirect
+  const redirectUrl = `${redirectFE || process.env.FRONTEND_URL}/payment-success`;
   const ipnUrl = `${process.env.BACKEND_URL}/payment-notify`;
 
   const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
@@ -180,14 +180,18 @@ app.post("/payment", async (req, res) => {
 });
 
 
-const { order } = require("./model/model");
+const { order } = require("./model/model"); // Model Order của bạn
 
 app.post("/payment-notify", express.json(), async (req, res) => {
   const data = req.body;
   console.log("📩 Nhận IPN từ MoMo:", data);
 
-  if (data.resultCode === 0) {
+  if (data.resultCode === 0) { // thanh toán thành công
     try {
+      const extra = data.extraData ? JSON.parse(data.extraData) : {};
+      const cartItems = extra.cart || [];
+      const customerInfo = extra.customerInfo || {};
+
       const orderData = {
         orderId: data.orderId,
         amount: data.amount,
@@ -196,17 +200,18 @@ app.post("/payment-notify", express.json(), async (req, res) => {
         orderInfo: data.orderInfo,
         payType: data.payType,
         signature: data.signature,
+        cartItems,
+        customerInfo,
         time: new Date(),
       };
 
       await order.create(orderData);
-      return res.status(200).json({ message: "✅ Đơn hàng đã được lưu vào MongoDB" });
 
+      return res.status(200).json({ message: "✅ Đơn hàng đã được lưu vào MongoDB" });
     } catch (error) {
       console.error("❌ Lỗi khi lưu đơn hàng:", error);
       return res.status(500).json({ message: "Lỗi server khi lưu đơn hàng" });
     }
-
   } else {
     return res.status(400).json({ message: "❌ Giao dịch thất bại từ MoMo", data });
   }
