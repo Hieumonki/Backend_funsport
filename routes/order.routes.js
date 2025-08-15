@@ -3,6 +3,7 @@ const router = express.Router();
 const orderController = require('../controllers/order');
 
 // ================= MoMo Test Payment =================
+router.post('/', orderController.createOrderAndPayWithMoMo);
 router.post('/create-momo-test', orderController.createOrderAndPayWithMoMo); // Tạo đơn + trả URL MoMo test
 router.post('/payment-notify', orderController.momoIpnHandler); // IPN từ MoMo test
 
