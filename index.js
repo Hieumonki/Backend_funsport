@@ -100,21 +100,31 @@ app.post("/payment", async (req, res) => {
   const crypto = require('crypto');
   const https = require('https');
 
-  const accessKey = 'F8BBA842ECF85';
-  const secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
-  const orderInfo = 'pay with MoMo';
-  const partnerCode = 'MOMO';
+  const { cart, customerInfo, redirectUrl } = req.body;
+
+  if (!cart || cart.length === 0) {
+    return res.status(400).json({ message: "Giỏ hàng trống" });
+  }
+
+  // Tính tổng tiền
+  const amount = cart.reduce((sum, item) => {
+    const price = item.price || 0;
+    const quantity = item.quantity || 1;
+    return sum + price * quantity;
+  }, 0);
+
+  const accessKey = process.env.MOMO_ACCESS_KEY;
+  const secretKey = process.env.MOMO_SECRET_KEY;
+  const partnerCode = process.env.MOMO_PARTNER_CODE;
   const requestType = "payWithMethod";
-  const amount = '50000';
   const orderId = partnerCode + new Date().getTime();
   const requestId = orderId;
-  const extraData = '';
+  const orderInfo = 'Thanh toán đơn hàng FunSport';
+  const extraData = Buffer.from(JSON.stringify({ cart, customerInfo })).toString('base64');
   const orderGroupId = '';
   const autoCapture = true;
   const lang = 'vi';
 
-  // ✅ Use env for redirect & IPN URLs
-  const redirectUrl = `${process.env.FRONTEND_URL}/payment-success`;
   const ipnUrl = `${process.env.BACKEND_URL}/payment-notify`;
 
   const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
@@ -125,8 +135,8 @@ app.post("/payment", async (req, res) => {
 
   const requestBody = JSON.stringify({
     partnerCode,
-    partnerName: "Test",
-    storeId: "MomoTestStore",
+    partnerName: "FunSport",
+    storeId: "FunSportStore",
     requestId,
     amount,
     orderId,
@@ -154,30 +164,24 @@ app.post("/payment", async (req, res) => {
 
   const req2 = https.request(options, res2 => {
     let body = '';
-
-    res2.on('data', chunk => {
-      body += chunk;
-    });
-
+    res2.on('data', chunk => body += chunk);
     res2.on('end', () => {
       try {
-        const parsed = JSON.parse(body);
-        res.status(200).json(parsed);
+        res.status(200).json(JSON.parse(body));
       } catch (e) {
-        console.error('❌ JSON Parse Error:', e);
         res.status(500).json({ message: 'Parse error from MoMo response' });
       }
     });
   });
 
-  req2.on('error', (e) => {
-    console.error(`❌ Request error: ${e.message}`);
+  req2.on('error', e => {
     res.status(500).json({ message: 'MoMo request error', error: e.message });
   });
 
   req2.write(requestBody);
   req2.end();
 });
+
 
 const { order } = require("./model/model");
 
