@@ -149,44 +149,6 @@ const accountSchema = new mongoose.Schema({
 }, { timestamps: true });
 accountSchema.plugin(mongoosePaginate);
 
-// ===== Order =====
-const orderSchema = new mongoose.Schema(
-  {
-    orderId: { type: String, unique: true, required: true },
-
-    cartItems: [
-      {
-        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'product', required: true },
-        name: { type: String, required: true },
-        price: { type: Number, required: true },
-        quantity: { type: Number, default: 1, min: 1 },
-      },
-    ],
-
-    customerInfo: {
-      fullName: { type: String, required: true },
-      phone: { type: String, required: true },
-      address: { type: String, required: true },
-      email: { type: String },
-    },
-
-    amount: { type: Number, required: true, min: 0 },
-    payment: { type: String, required: true, enum: ['momo', 'cod', 'bank'],
-       lowercase: true 
-    },
-
-    // MoMo Payment Info
-    transId: { type: String },
-    payType: { type: String },
-    signature: { type: String },
-
-    isLocked: { type: Boolean, default: false },
-  },
-  { timestamps: true } // Tự tạo createdAt và updatedAt
-);
-
-
-orderSchema.plugin(mongoosePaginate);
 
 // ===== News =====
 const newsSchema = new mongoose.Schema({

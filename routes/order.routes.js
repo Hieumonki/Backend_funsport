@@ -2,12 +2,14 @@ const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/order');
 
-// MoMo Payment
-router.post('/', orderController.createOrderAndPayWithMoMo);
-router.post('/payment-notify', orderController.momoIpnHandler);
+// ================= MoMo Test Payment =================
+router.post('/create-momo-test', orderController.createOrderAndPayWithMoMo); // Tạo đơn + trả URL MoMo test
+router.post('/payment-notify', orderController.momoIpnHandler); // IPN từ MoMo test
 
-// CRUD (đặt route cụ thể lên trước route động)
+// ================= Stats =================
 router.get('/revenue-by-category', orderController.getRevenueByCategory);
+
+// ================= CRUD Orders =================
 router.get('/', orderController.getAllOrders);
 router.get('/:id', orderController.getOrderById);
 router.put('/:id', orderController.updateOrder);

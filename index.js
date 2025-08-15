@@ -1,4 +1,3 @@
-const productsellRouter = require("./routes/productsell");
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -7,6 +6,16 @@ var bodyParser = require("body-parser");
 const morgan = require("morgan");
 const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
+const multer = require("multer");
+const path = require("path");
+const crypto = require('crypto');
+const https = require('https');
+const axios = require("axios");
+
+dotenv.config();
+
+// Import routes
+const productsellRouter = require("./routes/productsell");
 const authorRouter = require("./routes/author");
 const themeRouter = require("./routes/theme");
 const accountRouter = require("./routes/account");
@@ -19,48 +28,40 @@ const orderRoutes = require('./routes/order.routes');
 const bestSellerRoute = require('./routes/bestseller');
 const contactRouter = require('./routes/contact');
 
-
-// addimage
-const multer = require("multer");
-const path = require("path");
-const { url } = require("inspector");
-const axios = require("axios");
 app.use(express.json());
-// Cấu hình Multer để lưu tệp vào thư mục 'uploads'
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(cookieParser());
+app.use(cors());
+app.options('*', cors());
+app.use(morgan("common"));
+
+// Kết nối MongoDB
+mongoose.connect(process.env.MONGOOSE_URL, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => {
+  console.log("Kết nối thành công đến MongoDB");
+}).catch((error) => {
+  console.error("Lỗi kết nối MongoDB:", error);
+});
+
+// Cấu hình multer upload ảnh
 const storage = multer.diskStorage({
   destination: function (req, file, callback) {
     callback(null, "uploads/");
   },
   filename: function (req, file, callback) {
     const fileExtension = file.originalname.split(".").pop();
-    const uniqueFileName =
-      Date.now() + "-" + Math.round(Math.random() * 1000) + "." + fileExtension;
-
+    const uniqueFileName = Date.now() + "-" + Math.round(Math.random() * 1000) + "." + fileExtension;
     callback(null, uniqueFileName);
   },
 });
-
 const upload = multer({ storage });
 
-dotenv.config();
-mongoose
-  .connect(process.env.MONGOOSE_URL, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => {
-    console.log("Kết nối thành công đến MongoDB");
-  })
-  .catch((error) => {
-    console.error("Lỗi kết nối MongoDB:", error);
-  });
-
-app.use(bodyParser.json({ limit: "50mb" }));
-app.use(cookieParser());
-app.use(cors());
-app.options('*', cors());
-app.use(morgan("common"));
+// Public folder uploads
 app.use("/uploads", express.static("uploads"));
+
+// Routes
 app.use("/v1/author", authorRouter);
 app.use("/v1/theme", themeRouter);
 app.use("/v1/account", accountRouter);
@@ -74,157 +75,106 @@ app.use('/v1/news', newsRoutes);
 app.use('/v1/contact', contactRouter);
 app.use('/v1/bestseller', bestSellerRoute);
 
-categoryRouter
-app.listen(8000, () => {
-  console.log("sevver đang chạy");
-});
-
+// Upload ảnh
 app.post("/uploads", upload.single("image"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "Vui lòng tải lên một tệp ảnh." });
   }
-
   const imagePath = req.file.filename;
   res.status(200).json({ imagePath });
 });
+
+// Xem ảnh
 app.get("/view-image/:filename", (req, res) => {
   const { filename } = req.params;
   res.sendFile(path.join(__dirname, "uploads", filename));
 });
-const { order } = require("./model/model");
-const crypto = require('crypto');
-const https = require('https');
 
-app.post("/payment", async (req, res) => {
+/* ===================== MoMo Test Payment ===================== */
+app.post("/v1/orders/momo-pay", async (req, res) => {
   try {
-    const { amount, cart, customerInfo, redirectUrl: redirectFE } = req.body;
+    const { amount, orderInfo } = req.body;
 
-    // 1. Tạo mã đơn hàng MoMo
-    const orderId = 'MOMO' + new Date().getTime();
-    const requestId = orderId;
+    // MoMo test credentials
+    const partnerCode = "MOMO";
+    const accessKey = "F8BBA842ECF85";
+    const secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
+    const requestId = partnerCode + Date.now();
+    const orderId = requestId;
+    const redirectUrl = "http://localhost:4200/payment-success"; // Frontend nhận kết quả
+    const ipnUrl = "http://localhost:8000/v1/orders/momo-ipn";
+    const requestType = "captureWallet";
+    const extraData = "";
 
-    // 2. Lưu order vào MongoDB với trạng thái pending
-    await order.create({
-      orderId,
-      cartItems: cart.map(item => ({
-        productId: item.product?._id || null,
-        name: item.name || item.product?.name || '',
-        price: item.price || item.product?.price || 0,
-        quantity: item.quantity || 1
-      })),
-      customerInfo,
-      amount,
-      payment: "momo",
-      status: "pending"
-    });
+    // Tạo raw signature
+    const rawSignature =
+      `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}` +
+      `&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}` +
+      `&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
 
-    // 3. Chuẩn bị dữ liệu MoMo
-    const accessKey = 'F8BBA842ECF85';
-    const secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
-    const orderInfo = 'Thanh toán MoMo';
-    const partnerCode = 'MOMO';
-    const requestType = "payWithMethod";
-    const extraData = JSON.stringify({ cart, customerInfo });
-    const orderGroupId = '';
-    const autoCapture = true;
-    const lang = 'vi';
-
-    const redirectUrl = `${redirectFE || process.env.FRONTEND_URL}/payment-success`;
-    const ipnUrl = `${process.env.BACKEND_URL}/payment-notify`;
-
-    const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
-
-    const signature = crypto.createHmac('sha256', secretKey)
+    // Ký HMAC SHA256
+    const signature = crypto.createHmac("sha256", secretKey)
       .update(rawSignature)
-      .digest('hex');
+      .digest("hex");
 
-    const requestBody = JSON.stringify({
+    const requestBody = {
       partnerCode,
-      partnerName: "Test",
-      storeId: "MomoTestStore",
+      accessKey,
       requestId,
       amount,
       orderId,
       orderInfo,
       redirectUrl,
       ipnUrl,
-      lang,
-      requestType,
-      autoCapture,
       extraData,
-      orderGroupId,
-      signature
-    });
-
-    // 4. Gửi yêu cầu sang MoMo
-    const options = {
-      hostname: 'test-payment.momo.vn',
-      port: 443,
-      path: '/v2/gateway/api/create',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(requestBody)
-      }
+      requestType,
+      signature,
+      lang: "vi",
     };
 
-    const req2 = https.request(options, res2 => {
-      let body = '';
-      res2.on('data', chunk => { body += chunk; });
-      res2.on('end', () => {
-        try {
-          const parsed = JSON.parse(body);
-          res.status(200).json(parsed);
-        } catch (e) {
-          res.status(500).json({ message: 'Parse error from MoMo response' });
-        }
+    // Gửi request tới MoMo test
+    const options = {
+      hostname: "test-payment.momo.vn",
+      port: 443,
+      path: "/v2/gateway/api/create",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(JSON.stringify(requestBody)),
+      },
+    };
+
+    const request = https.request(options, (momoRes) => {
+      let data = "";
+      momoRes.on("data", (chunk) => {
+        data += chunk;
+      });
+      momoRes.on("end", () => {
+        const jsonData = JSON.parse(data);
+        return res.json(jsonData); // Trả về payUrl cho FE
       });
     });
 
-    req2.on('error', (e) => {
-      res.status(500).json({ message: 'MoMo request error', error: e.message });
+    request.on("error", (e) => {
+      console.error(e);
+      res.status(500).json({ error: "Không thể tạo thanh toán MoMo" });
     });
 
-    req2.write(requestBody);
-    req2.end();
-
-  } catch (error) {
-    console.error("❌ Lỗi khi tạo order và gọi MoMo:", error);
-    res.status(500).json({ message: "Lỗi server" });
+    request.write(JSON.stringify(requestBody));
+    request.end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Lỗi server" });
   }
 });
 
-
-app.post("/payment-notify", express.json(), async (req, res) => {
-  const data = req.body;
-  console.log("📩 IPN từ MoMo:", data);
-
-  if (data.resultCode === 0) {
-    try {
-      await order.findOneAndUpdate(
-        { orderId: data.orderId },
-        {
-          status: "paid",
-          transId: data.transId,
-          payType: data.payType,
-          signature: data.signature
-        }
-      );
-      return res.status(200).json({ message: "✅ Đơn hàng đã được cập nhật thành paid" });
-    } catch (error) {
-      console.error("❌ Lỗi khi update đơn hàng:", error);
-      return res.status(500).json({ message: "Lỗi server khi update đơn hàng" });
-    }
-  } else {
-    await order.findOneAndUpdate(
-      { orderId: data.orderId },
-      { status: "failed" }
-    );
-    return res.status(400).json({ message: "❌ Giao dịch thất bại" });
-  }
+// MoMo IPN
+app.post("/v1/orders/momo-ipn", (req, res) => {
+  console.log("MoMo IPN:", req.body);
+  res.status(204).send(); // MoMo yêu cầu trả 204
 });
+/* ============================================================= */
 
-
-
-
-
+app.listen(8000, () => {
+  console.log("Server đang chạy tại http://localhost:8000");
+});

@@ -1,6 +1,5 @@
 const { order: Order, product: Product } = require('../model/model');
 
-// 🚀 MoMo Payment + tạo đơn hàng
 const createOrderAndPayWithMoMo = async (req, res) => {
   try {
     const { cartItems, customerInfo, amount, payment } = req.body;
@@ -29,23 +28,72 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       })
     );
 
-    const orderCode = 'ORD-' + Date.now();
+    const orderCode = 'TEST-' + Date.now();
 
     const newOrder = await Order.create({
       orderId: orderCode,
       cartItems: detailedCartItems,
       customerInfo,
       amount,
-      payment: payment || 'momo',
+      payment: payment || 'momo_test',
       status: 'pending',
       createdAt: new Date()
     });
 
-    // TODO: Gọi API MoMo thật (hiện tại trả về mẫu)
-    res.status(201).json({
-      message: 'Tạo đơn hàng thành công, chưa thực hiện thanh toán MoMo',
-      order: newOrder
+    // ===== MoMo Test Config =====
+    const endpoint = 'https://test-payment.momo.vn/v2/gateway/api/create';
+    const partnerCode = 'MOMO';
+    const accessKey = 'F8BBA842ECF85';
+    const secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
+    const requestId = orderCode;
+    const orderId = orderCode;
+    const orderInfo = `Thanh toán đơn hàng test ${orderCode}`;
+    const redirectUrl = 'http://localhost:4200/payment-success'; // URL frontend sau thanh toán
+    const ipnUrl = 'http://localhost:3000/api/momo-ipn'; // URL backend nhận IPN
+    const extraData = '';
+
+    // Tạo chữ ký
+    const rawSignature =
+      `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}` +
+      `&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}` +
+      `&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}` +
+      `&requestId=${requestId}&requestType=captureWallet`;
+
+    const signature = crypto.createHmac('sha256', secretKey)
+      .update(rawSignature)
+      .digest('hex');
+
+    // Body gửi MoMo
+    const requestBody = {
+      partnerCode,
+      accessKey,
+      requestId,
+      amount: String(amount),
+      orderId,
+      orderInfo,
+      redirectUrl,
+      ipnUrl,
+      extraData,
+      requestType: 'captureWallet',
+      signature,
+      lang: 'vi'
+    };
+
+    // Gửi request tới MoMo
+    const momoRes = await axios.post(endpoint, requestBody, {
+      headers: { 'Content-Type': 'application/json' }
     });
+
+    if (momoRes.data?.payUrl) {
+      return res.status(201).json({
+        message: 'Tạo đơn hàng test thành công',
+        order: newOrder,
+        payUrl: momoRes.data.payUrl
+      });
+    } else {
+      return res.status(500).json({ message: 'Không tạo được link thanh toán MoMo test' });
+    }
+
   } catch (err) {
     console.error('❌ Lỗi khi tạo đơn hàng MoMo:', err);
     res.status(500).json({ message: 'Lỗi khi tạo đơn hàng: ' + err.message });
