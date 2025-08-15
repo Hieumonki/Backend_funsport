@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+const axios = require('axios'); 
 const Order = require('../model/order');            // model Order riêng
 const { product: Product } = require('../model/model'); // Product từ model chung
 
