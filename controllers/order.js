@@ -126,7 +126,7 @@ const getAllOrders = async (req, res) => {
     const orders = await Order.find()
       .populate({
         path: 'cartItems.productId',
-        populate: { path: 'category', model: 'categories' }
+        populate: { path: 'category', model: 'category' }
       })
       .sort({ createdAt: -1 });
 
@@ -143,7 +143,7 @@ const getOrderById = async (req, res) => {
     const order = await Order.findOne({ orderId: req.params.id })
       .populate({
         path: 'cartItems.productId',
-        populate: { path: 'category', model: 'categories' }
+        populate: { path: 'category', model: 'category' }
       });
 
     if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
