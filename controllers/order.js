@@ -1,4 +1,4 @@
-const { order: Order, product: Product } = require('../model/model');
+const { order: Order, product: Product } = require('../model/order');
 
 const createOrderAndPayWithMoMo = async (req, res) => {
   try {
