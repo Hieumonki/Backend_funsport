@@ -121,19 +121,20 @@ const momoIpnHandler = async (req, res) => {
 };
 
 // 📌 Lấy tất cả đơn hàng
-const getAllOrders = async (req, res) => {
+export const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
       .populate({
-        path: 'cartItems.productId',
-        populate: { path: 'category', model: 'category' }
+        path: 'cartItems.productId', // populate sản phẩm
+        select: 'name price category',
+        populate: { path: 'category', select: 'name' } // populate category
       })
       .sort({ createdAt: -1 });
 
     res.status(200).json(orders);
-  } catch (err) {
-    console.error('❌ Lỗi lấy danh sách đơn hàng:', err);
-    res.status(500).json({ message: 'Lỗi lấy đơn hàng: ' + err.message });
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
