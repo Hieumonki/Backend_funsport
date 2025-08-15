@@ -151,24 +151,30 @@ accountSchema.plugin(mongoosePaginate);
 
 // ===== Order =====
 const orderSchema = new mongoose.Schema({
-  orderId: String,
-  productId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'product',
+  orderId: String, // Mã đơn hàng MoMo
+  cartItems: [
+    {
+      productId: { type: mongoose.Schema.Types.ObjectId, ref: 'product' },
+      name: String,
+      price: Number,
+      quantity: { type: Number, default: 1 }
+    }
+  ],
+  customerInfo: {
+    name: String,
+    email: String,
+    phone: String,
+    address: String
   },
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'account',
-  },
-  totalAmount: Number,
-  payment: String,
-  status: String,
-  category: String,
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
+  amount: Number, // Tổng tiền
+  payment: { type: String, default: "momo" },
+  status: { type: String, default: "pending" }, // pending | paid | failed
+  transId: String, // Mã giao dịch MoMo
+  payType: String, // Kiểu thanh toán
+  signature: String,
+  createdAt: { type: Date, default: Date.now }
 });
+
 orderSchema.plugin(mongoosePaginate);
 
 // ===== News =====

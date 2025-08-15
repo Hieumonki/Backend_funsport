@@ -42,11 +42,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// addimage
-
 dotenv.config();
-//connect
-
 mongoose
   .connect(process.env.MONGOOSE_URL, {
     useNewUrlParser: true,
@@ -95,128 +91,140 @@ app.get("/view-image/:filename", (req, res) => {
   const { filename } = req.params;
   res.sendFile(path.join(__dirname, "uploads", filename));
 });
+const { order } = require("./model/model");
+const crypto = require('crypto');
+const https = require('https');
 
 app.post("/payment", async (req, res) => {
-  const crypto = require('crypto');
-  const https = require('https');
+  try {
+    const { amount, cart, customerInfo, redirectUrl: redirectFE } = req.body;
 
-  const { amount, cart, customerInfo, redirectUrl: redirectFE } = req.body;
+    // 1. Tạo mã đơn hàng MoMo
+    const orderId = 'MOMO' + new Date().getTime();
+    const requestId = orderId;
 
-  const accessKey = 'F8BBA842ECF85';
-  const secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
-  const orderInfo = 'Thanh toán MoMo';
-  const partnerCode = 'MOMO';
-  const requestType = "payWithMethod";
-  const orderId = partnerCode + new Date().getTime();
-  const requestId = orderId;
-  const extraData = JSON.stringify({ cart, customerInfo }); 
-  const orderGroupId = '';
-  const autoCapture = true;
-  const lang = 'vi';
-
-  const redirectUrl = `${redirectFE || process.env.FRONTEND_URL}/payment-success`;
-  const ipnUrl = `${process.env.BACKEND_URL}/payment-notify`;
-
-  const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
-
-  const signature = crypto.createHmac('sha256', secretKey)
-    .update(rawSignature)
-    .digest('hex');
-
-  const requestBody = JSON.stringify({
-    partnerCode,
-    partnerName: "Test",
-    storeId: "MomoTestStore",
-    requestId,
-    amount,
-    orderId,
-    orderInfo,
-    redirectUrl,
-    ipnUrl,
-    lang,
-    requestType,
-    autoCapture,
-    extraData,
-    orderGroupId,
-    signature
-  });
-
-  const options = {
-    hostname: 'test-payment.momo.vn',
-    port: 443,
-    path: '/v2/gateway/api/create',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(requestBody)
-    }
-  };
-
-  const req2 = https.request(options, res2 => {
-    let body = '';
-
-    res2.on('data', chunk => {
-      body += chunk;
+    // 2. Lưu order vào MongoDB với trạng thái pending
+    await order.create({
+      orderId,
+      cartItems: cart.map(item => ({
+        productId: item.product?._id || null,
+        name: item.name || item.product?.name || '',
+        price: item.price || item.product?.price || 0,
+        quantity: item.quantity || 1
+      })),
+      customerInfo,
+      amount,
+      payment: "momo",
+      status: "pending"
     });
 
-    res2.on('end', () => {
-      try {
-        const parsed = JSON.parse(body);
-        res.status(200).json(parsed);
-      } catch (e) {
-        console.error('❌ JSON Parse Error:', e);
-        res.status(500).json({ message: 'Parse error from MoMo response' });
+    // 3. Chuẩn bị dữ liệu MoMo
+    const accessKey = 'F8BBA842ECF85';
+    const secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
+    const orderInfo = 'Thanh toán MoMo';
+    const partnerCode = 'MOMO';
+    const requestType = "payWithMethod";
+    const extraData = JSON.stringify({ cart, customerInfo });
+    const orderGroupId = '';
+    const autoCapture = true;
+    const lang = 'vi';
+
+    const redirectUrl = `${redirectFE || process.env.FRONTEND_URL}/payment-success`;
+    const ipnUrl = `${process.env.BACKEND_URL}/payment-notify`;
+
+    const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
+
+    const signature = crypto.createHmac('sha256', secretKey)
+      .update(rawSignature)
+      .digest('hex');
+
+    const requestBody = JSON.stringify({
+      partnerCode,
+      partnerName: "Test",
+      storeId: "MomoTestStore",
+      requestId,
+      amount,
+      orderId,
+      orderInfo,
+      redirectUrl,
+      ipnUrl,
+      lang,
+      requestType,
+      autoCapture,
+      extraData,
+      orderGroupId,
+      signature
+    });
+
+    // 4. Gửi yêu cầu sang MoMo
+    const options = {
+      hostname: 'test-payment.momo.vn',
+      port: 443,
+      path: '/v2/gateway/api/create',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(requestBody)
       }
+    };
+
+    const req2 = https.request(options, res2 => {
+      let body = '';
+      res2.on('data', chunk => { body += chunk; });
+      res2.on('end', () => {
+        try {
+          const parsed = JSON.parse(body);
+          res.status(200).json(parsed);
+        } catch (e) {
+          res.status(500).json({ message: 'Parse error from MoMo response' });
+        }
+      });
     });
-  });
 
-  req2.on('error', (e) => {
-    console.error(`❌ Request error: ${e.message}`);
-    res.status(500).json({ message: 'MoMo request error', error: e.message });
-  });
+    req2.on('error', (e) => {
+      res.status(500).json({ message: 'MoMo request error', error: e.message });
+    });
 
-  req2.write(requestBody);
-  req2.end();
+    req2.write(requestBody);
+    req2.end();
+
+  } catch (error) {
+    console.error("❌ Lỗi khi tạo order và gọi MoMo:", error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
 });
-
-
 
 const { order } = require("./model/model"); // Model Order của bạn
 
 app.post("/payment-notify", express.json(), async (req, res) => {
   const data = req.body;
-  console.log("📩 Nhận IPN từ MoMo:", data);
+  console.log("📩 IPN từ MoMo:", data);
 
-  if (data.resultCode === 0) { // thanh toán thành công
+  if (data.resultCode === 0) {
     try {
-      const extra = data.extraData ? JSON.parse(data.extraData) : {};
-      const cartItems = extra.cart || [];
-      const customerInfo = extra.customerInfo || {};
-
-      const orderData = {
-        orderId: data.orderId,
-        amount: data.amount,
-        requestId: data.requestId,
-        transId: data.transId,
-        orderInfo: data.orderInfo,
-        payType: data.payType,
-        signature: data.signature,
-        cartItems,
-        customerInfo,
-        time: new Date(),
-      };
-
-      await order.create(orderData);
-
-      return res.status(200).json({ message: "✅ Đơn hàng đã được lưu vào MongoDB" });
+      await order.findOneAndUpdate(
+        { orderId: data.orderId },
+        {
+          status: "paid",
+          transId: data.transId,
+          payType: data.payType,
+          signature: data.signature
+        }
+      );
+      return res.status(200).json({ message: "✅ Đơn hàng đã được cập nhật thành paid" });
     } catch (error) {
-      console.error("❌ Lỗi khi lưu đơn hàng:", error);
-      return res.status(500).json({ message: "Lỗi server khi lưu đơn hàng" });
+      console.error("❌ Lỗi khi update đơn hàng:", error);
+      return res.status(500).json({ message: "Lỗi server khi update đơn hàng" });
     }
   } else {
-    return res.status(400).json({ message: "❌ Giao dịch thất bại từ MoMo", data });
+    await order.findOneAndUpdate(
+      { orderId: data.orderId },
+      { status: "failed" }
+    );
+    return res.status(400).json({ message: "❌ Giao dịch thất bại" });
   }
 });
+
 
 
 
