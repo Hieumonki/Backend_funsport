@@ -52,7 +52,7 @@ const createOrderAndPayWithMoMo = async (req, res) => {
     const requestId = orderCode;
     const orderId = orderCode;
     const orderInfo = `Thanh toán đơn hàng test ${orderCode}`;
-    const redirectUrl = 'http://localhost:4200/payment-success';
+    const redirectUrl = 'http://localhost:4200/home';
     const ipnUrl = 'http://localhost:3000/api/momo-ipn';
     const extraData = '';
     const partnerName = "Test Partner";
