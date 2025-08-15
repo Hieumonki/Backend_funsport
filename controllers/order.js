@@ -231,13 +231,14 @@ export const getRevenueByCategory = async (req, res) => {
           as: 'categoryInfo'
         }
       },
-      { $unwind: '$categoryInfo' },
+      { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
       {
         $group: {
-          _id: '$categoryInfo.name',
+          _id: { $ifNull: ['$categoryInfo.name', 'Không có danh mục'] },
           totalRevenue: { $sum: { $multiply: ['$cartItems.quantity', '$cartItems.price'] } }
         }
-      }
+      },
+      { $sort: { totalRevenue: -1 } }
     ]);
 
     res.status(200).json(revenue);
