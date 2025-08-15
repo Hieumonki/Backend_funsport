@@ -96,90 +96,93 @@ app.get("/view-image/:filename", (req, res) => {
   res.sendFile(path.join(__dirname, "uploads", filename));
 });
 
-app.post("/payment", async (req, res) => {
-  const crypto = require('crypto');
-  const https = require('https');
+app.post("/v1/payment", async (req, res) => {
+  try {
+    const { cart, customerInfo, redirectUrl } = req.body;
 
-  const { cart, customerInfo, redirectUrl } = req.body;
-
-  if (!cart || cart.length === 0) {
-    return res.status(400).json({ message: "Giỏ hàng trống" });
-  }
-
-  // Tính tổng tiền
-  const amount = cart.reduce((sum, item) => {
-    const price = item.price || 0;
-    const quantity = item.quantity || 1;
-    return sum + price * quantity;
-  }, 0);
-
-  const accessKey = process.env.MOMO_ACCESS_KEY;
-  const secretKey = process.env.MOMO_SECRET_KEY;
-  const partnerCode = process.env.MOMO_PARTNER_CODE;
-  const requestType = "payWithMethod";
-  const orderId = partnerCode + new Date().getTime();
-  const requestId = orderId;
-  const orderInfo = 'Thanh toán đơn hàng FunSport';
-  const extraData = Buffer.from(JSON.stringify({ cart, customerInfo })).toString('base64');
-  const orderGroupId = '';
-  const autoCapture = true;
-  const lang = 'vi';
-
-  const ipnUrl = `${process.env.BACKEND_URL}/payment-notify`;
-
-  const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
-
-  const signature = crypto.createHmac('sha256', secretKey)
-    .update(rawSignature)
-    .digest('hex');
-
-  const requestBody = JSON.stringify({
-    partnerCode,
-    partnerName: "FunSport",
-    storeId: "FunSportStore",
-    requestId,
-    amount,
-    orderId,
-    orderInfo,
-    redirectUrl,
-    ipnUrl,
-    lang,
-    requestType,
-    autoCapture,
-    extraData,
-    orderGroupId,
-    signature
-  });
-
-  const options = {
-    hostname: 'test-payment.momo.vn',
-    port: 443,
-    path: '/v2/gateway/api/create',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(requestBody)
+    if (!cart || cart.length === 0) {
+      return res.status(400).json({ message: "Giỏ hàng trống" });
     }
-  };
 
-  const req2 = https.request(options, res2 => {
-    let body = '';
-    res2.on('data', chunk => body += chunk);
-    res2.on('end', () => {
-      try {
-        res.status(200).json(JSON.parse(body));
-      } catch (e) {
-        res.status(500).json({ message: 'Parse error from MoMo response' });
-      }
+    // Tính tổng tiền
+    const amount = cart.reduce((sum, item) => {
+      const price = item.price || 0;
+      const quantity = item.quantity || 1;
+      return sum + price * quantity;
+    }, 0);
+
+    // Thông tin MoMo
+    const accessKey = process.env.MOMO_ACCESS_KEY;
+    const secretKey = process.env.MOMO_SECRET_KEY;
+    const partnerCode = process.env.MOMO_PARTNER_CODE;
+    const requestType = "payWithMethod";
+    const orderId = partnerCode + new Date().getTime();
+    const requestId = orderId;
+    const orderInfo = 'Thanh toán đơn hàng FunSport';
+    const extraData = Buffer.from(JSON.stringify({ cart, customerInfo })).toString('base64');
+    const orderGroupId = '';
+    const autoCapture = true;
+    const lang = 'vi';
+    const ipnUrl = `${process.env.BACKEND_URL}/v1/payment-notify`;
+
+    const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
+    const signature = crypto.createHmac('sha256', secretKey)
+      .update(rawSignature)
+      .digest('hex');
+
+    const requestBody = JSON.stringify({
+      partnerCode,
+      partnerName: "FunSport",
+      storeId: "FunSportStore",
+      requestId,
+      amount,
+      orderId,
+      orderInfo,
+      redirectUrl,
+      ipnUrl,
+      lang,
+      requestType,
+      autoCapture,
+      extraData,
+      orderGroupId,
+      signature
     });
-  });
 
-  req2.on('error', e => {
-    res.status(500).json({ message: 'MoMo request error', error: e.message });
-  });
+    const options = {
+      hostname: 'test-payment.momo.vn',
+      port: 443,
+      path: '/v2/gateway/api/create',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(requestBody)
+      }
+    };
 
-  req2.write(requestBody);
-  req2.end();
+    const req2 = https.request(options, res2 => {
+      let body = '';
+      res2.on('data', chunk => body += chunk);
+      res2.on('end', () => {
+        try {
+          const momoRes = JSON.parse(body);
+          return res.status(200).json(momoRes); // trả về payUrl cho frontend
+        } catch (err) {
+          return res.status(500).json({ message: "Lỗi parse response MoMo" });
+        }
+      });
+    });
+
+    req2.on('error', e => {
+      return res.status(500).json({ message: "Lỗi request tới MoMo", error: e.message });
+    });
+
+    req2.write(requestBody);
+    req2.end();
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
 });
 
 
