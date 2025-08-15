@@ -218,7 +218,6 @@ const product = mongoose.model("product", productSchema);
 const theme = mongoose.model("theme", themeSchema);
 const author = mongoose.model("author", authorSchema);
 const account = mongoose.model("account", accountSchema);
-const order = mongoose.model("order", orderSchema);
 const news = mongoose.model("news", newsSchema);
 const stats = mongoose.model("stats", statsSchema);
 const productsell = mongoose.model("productsell", productSellSchema);
@@ -230,7 +229,6 @@ module.exports = {
   theme,
   author,
   account,
-  order,
   news,
   stats,
   productsell,
