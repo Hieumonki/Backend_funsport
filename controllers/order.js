@@ -2,8 +2,9 @@
 
 import crypto from 'crypto';
 import axios from 'axios';
-const Order = require('../model/order');                 // Model Order riêng
-const { product: Product } = require('../model/model');  // Product từ model chung
+import Order from '../model/order.js';
+import { product as Product } from '../model/model.js';
+
 
 // 📌 Tạo đơn hàng và trả link MoMo test (payWithMethod)
 const createOrderAndPayWithMoMo = async (req, res) => {
