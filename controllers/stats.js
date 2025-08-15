@@ -1,5 +1,5 @@
 const {productsell: productsell } = require('../model/model');
-const Order = require('../model/order');                
+const order = require('../model/order');                
 exports.getStats = async (req, res) => {
   try {
     const orders = await order.find();
