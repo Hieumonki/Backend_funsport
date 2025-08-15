@@ -100,12 +100,13 @@ app.post("/payment", async (req, res) => {
   const crypto = require('crypto');
   const https = require('https');
 
+  const { amount, cart, customerInfo, redirectUrl: redirectFE } = req.body; // lấy từ FE
+
   const accessKey = 'F8BBA842ECF85';
   const secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
-  const orderInfo = 'pay with MoMo';
+  const orderInfo = 'Thanh toán MoMo';
   const partnerCode = 'MOMO';
   const requestType = "payWithMethod";
-  const amount = '50000';
   const orderId = partnerCode + new Date().getTime();
   const requestId = orderId;
   const extraData = '';
@@ -113,8 +114,7 @@ app.post("/payment", async (req, res) => {
   const autoCapture = true;
   const lang = 'vi';
 
-  // ✅ Use env for redirect & IPN URLs
-  const redirectUrl = `${process.env.FRONTEND_URL}/payment-success`;
+  const redirectUrl = `${redirectFE || process.env.FRONTEND_URL}/payment-success`; // FE có thể gửi redirect
   const ipnUrl = `${process.env.BACKEND_URL}/payment-notify`;
 
   const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
@@ -178,6 +178,7 @@ app.post("/payment", async (req, res) => {
   req2.write(requestBody);
   req2.end();
 });
+
 
 const { order } = require("./model/model");
 
