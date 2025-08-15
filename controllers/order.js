@@ -1,6 +1,6 @@
 // controllers/order.js
-const crypto = require('crypto');
 const axios = require('axios');
+import crypto from 'crypto';
 
 const Order = require('../model/order');                 // Model Order riêng
 const { product: Product } = require('../model/model');  // Product từ model chung
