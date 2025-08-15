@@ -150,30 +150,39 @@ const accountSchema = new mongoose.Schema({
 accountSchema.plugin(mongoosePaginate);
 
 // ===== Order =====
-const orderSchema = new mongoose.Schema({
-  orderId: String, // Mã đơn hàng MoMo
-  cartItems: [
-    {
-      productId: { type: mongoose.Schema.Types.ObjectId, ref: 'product' },
-      name: String,
-      price: Number,
-      quantity: { type: Number, default: 1 }
-    }
-  ],
-  customerInfo: {
-    name: String,
-    email: String,
-    phone: String,
-    address: String
+const orderSchema = new mongoose.Schema(
+  {
+    orderId: { type: String, unique: true, required: true },
+
+    cartItems: [
+      {
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'product', required: true },
+        name: { type: String, required: true },
+        price: { type: Number, required: true },
+        quantity: { type: Number, default: 1, min: 1 },
+      },
+    ],
+
+    customerInfo: {
+      fullName: { type: String, required: true },
+      phone: { type: String, required: true },
+      address: { type: String, required: true },
+      email: { type: String },
+    },
+
+    amount: { type: Number, required: true, min: 0 },
+    payment: { type: String, required: true, enum: ['MoMo', 'COD', 'Bank'] },
+
+    // MoMo Payment Info
+    transId: { type: String },
+    payType: { type: String },
+    signature: { type: String },
+
+    isLocked: { type: Boolean, default: false },
   },
-  amount: Number, // Tổng tiền
-  payment: { type: String, default: "momo" },
-  status: { type: String, default: "pending" }, // pending | paid | failed
-  transId: String, // Mã giao dịch MoMo
-  payType: String, // Kiểu thanh toán
-  signature: String,
-  createdAt: { type: Date, default: Date.now }
-});
+  { timestamps: true } // Tự tạo createdAt và updatedAt
+);
+
 
 orderSchema.plugin(mongoosePaginate);
 

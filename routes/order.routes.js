@@ -6,7 +6,7 @@ const orderController = require('../controllers/order');
 router.post('/', orderController.createOrderAndPayWithMoMo);
 router.post('/payment-notify', orderController.momoIpnHandler);
 
-// CRUD
+// CRUD (đặt route cụ thể lên trước route động)
 router.get('/revenue-by-category', orderController.getRevenueByCategory);
 router.get('/', orderController.getAllOrders);
 router.get('/:id', orderController.getOrderById);
