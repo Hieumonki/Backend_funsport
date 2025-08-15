@@ -1,4 +1,4 @@
-const { order: Order } = require('../model/model');
+const { order: Order, product: Product } = require('../model/model');
 
 // 🚀 MoMo Payment + tạo đơn hàng
 const createOrderAndPayWithMoMo = async (req, res) => {
@@ -9,15 +9,31 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       return res.status(400).json({ message: 'Giỏ hàng trống' });
     }
 
-    if (!customerInfo?.name || !customerInfo?.phone) {
-      return res.status(400).json({ message: 'Thiếu thông tin khách hàng' });
+    if (!customerInfo?.fullName || !customerInfo?.phone) {
+      return res.status(400).json({ message: 'Thiếu thông tin khách hàng (fullName, phone)' });
     }
+
+    // ✅ Lấy dữ liệu sản phẩm từ DB để bổ sung name & price
+    const detailedCartItems = await Promise.all(
+      cartItems.map(async (item) => {
+        const product = await Product.findById(item.productId);
+        if (!product) {
+          throw new Error(`Không tìm thấy sản phẩm với ID: ${item.productId}`);
+        }
+        return {
+          productId: product._id,
+          name: product.name,
+          price: product.price,
+          quantity: item.quantity || 1
+        };
+      })
+    );
 
     const orderCode = 'ORD-' + Date.now();
 
     const newOrder = await Order.create({
       orderId: orderCode,
-      cartItems,
+      cartItems: detailedCartItems,
       customerInfo,
       amount,
       payment: payment || 'momo',
@@ -25,7 +41,7 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       createdAt: new Date()
     });
 
-    // TODO: Gọi API MoMo thật ở đây (hiện tại chỉ trả về dữ liệu mẫu)
+    // TODO: Gọi API MoMo thật (hiện tại trả về mẫu)
     res.status(201).json({
       message: 'Tạo đơn hàng thành công, chưa thực hiện thanh toán MoMo',
       order: newOrder
@@ -36,11 +52,11 @@ const createOrderAndPayWithMoMo = async (req, res) => {
   }
 };
 
-// 📌 MoMo IPN handler (thông báo từ MoMo)
+// 📌 MoMo IPN handler
 const momoIpnHandler = async (req, res) => {
   try {
     console.log('📥 Nhận IPN từ MoMo:', req.body);
-    // TODO: Xử lý cập nhật trạng thái đơn hàng ở đây
+    // TODO: Cập nhật trạng thái đơn hàng
     res.status(200).json({ message: 'IPN nhận thành công' });
   } catch (err) {
     console.error('❌ Lỗi IPN MoMo:', err);
