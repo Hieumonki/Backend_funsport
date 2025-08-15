@@ -1,5 +1,6 @@
-const  Order  = require('../model/order');
-const Product = require('../model/model');
+const Order = require('../model/order');            // model Order riêng
+const { product: Product } = require('../model/model'); // Product từ model chung
+
 const createOrderAndPayWithMoMo = async (req, res) => {
   try {
     const { cartItems, customerInfo, amount, payment } = req.body;
