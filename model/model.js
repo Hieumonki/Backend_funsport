@@ -171,7 +171,9 @@ const orderSchema = new mongoose.Schema(
     },
 
     amount: { type: Number, required: true, min: 0 },
-    payment: { type: String, required: true, enum: ['MoMo', 'COD', 'Bank'] },
+    payment: { type: String, required: true, enum: ['MoMo', 'COD', 'Bank'],
+       lowercase: true 
+    },
 
     // MoMo Payment Info
     transId: { type: String },
