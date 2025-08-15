@@ -4,7 +4,7 @@ const OrderSchema = new mongoose.Schema({
   orderId: { type: String, required: true, unique: true },
   cartItems: [
     {
-      productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+      productId: { type: mongoose.Schema.Types.ObjectId, ref: 'product', required: true },
       name: { type: String, required: true },
       price: { type: Number, required: true },
       quantity: { type: Number, required: true }
@@ -22,7 +22,7 @@ const OrderSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Order', OrderSchema);
+module.exports = mongoose.model('order', OrderSchema);
 
 
 
