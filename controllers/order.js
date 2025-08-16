@@ -26,7 +26,8 @@ export const createOrderAndPayWithMoMo = async (req, res) => {
           productId: product._id,
           name: product.name,
           price: product.price,
-          quantity: item.quantity || 1
+          quantity: item.quantity || 1,
+           image: product.image 
         };
       })
     );
@@ -123,7 +124,7 @@ export const getAllOrders = async (req, res) => {
     const orders = await Order.find()
       .populate({
         path: 'cartItems.productId',
-        select: 'name price category',
+        select: 'name price category image',
         populate: { path: 'category', select: 'name' }
       })
       .sort({ createdAt: -1 })
@@ -210,7 +211,7 @@ export const toggleOrderLock = async (req, res) => {
   }
 };
 
-export const getRevenueByCategory = async (req, res) => {
+const getRevenueByCategory = async (req, res) => {
   try {
     const revenue = await Order.aggregate([
       { $unwind: '$cartItems' },
@@ -222,11 +223,11 @@ export const getRevenueByCategory = async (req, res) => {
           as: 'productInfo'
         }
       },
-      { $unwind: '$productInfo' },
+      { $unwind: { path: '$productInfo', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'categories',
-          localField: 'productInfo.category',
+          localField: 'productInfo.categoryId',
           foreignField: '_id',
           as: 'categoryInfo'
         }
@@ -234,16 +235,21 @@ export const getRevenueByCategory = async (req, res) => {
       { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
       {
         $group: {
-          _id: { $ifNull: ['$categoryInfo.name', 'Không có danh mục'] },
-          totalRevenue: { $sum: { $multiply: ['$cartItems.quantity', '$cartItems.price'] } }
+          _id: { $ifNull: ['$categoryInfo.name', 'Không xác định'] },
+          totalRevenue: {
+            $sum: {
+              $multiply: [
+                { $ifNull: ['$cartItems.quantity', 0] },
+                { $ifNull: ['$cartItems.price', 0] }
+              ]
+            }
+          }
         }
-      },
-      { $sort: { totalRevenue: -1 } }
+      }
     ]);
 
-    res.status(200).json(revenue);
+    res.json(revenue);
   } catch (err) {
-    console.error('❌ Lỗi thống kê doanh thu:', err);
-    res.status(500).json({ message: 'Lỗi thống kê doanh thu: ' + err.message });
+    res.status(500).json({ error: err.message });
   }
 };
