@@ -211,7 +211,7 @@ export const toggleOrderLock = async (req, res) => {
   }
 };
 
-const getRevenueByCategory = async (req, res) => {
+export const getRevenueByCategory = async (req, res) => {
   try {
     const revenue = await Order.aggregate([
       { $unwind: '$cartItems' },
