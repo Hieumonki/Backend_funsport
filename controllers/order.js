@@ -148,6 +148,24 @@ export const getAllOrders = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+export const getOrdersByUser = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const orders = await Order.find({ userId })
+      .populate({
+        path: 'cartItems.productId',
+        select: 'name price category image',
+        populate: { path: 'category', select: 'name' }
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json(orders);
+  } catch (err) {
+    console.error('❌ Lỗi lấy đơn hàng của user:', err);
+    res.status(500).json({ message: 'Lỗi server: ' + err.message });
+  }
+};
 
 // 📌 Lấy đơn hàng theo ID
 export const getOrderById = async (req, res) => {
