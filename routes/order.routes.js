@@ -14,6 +14,8 @@ router.get('/revenue-by-category', orderController.getRevenueByCategory);
 // Orders user
 router.get('/my', varifyToken, orderController.getOrdersByUser);
 router.get('/:id', varifyToken, orderController.getOrderById);
+router.patch('/code/:orderId/cancel', varifyToken, orderController.cancelOrderByCode);
+
 router.patch('/:id/cancel', varifyToken, orderController.cancelOrder);
 
 // Orders admin
