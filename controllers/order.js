@@ -46,7 +46,7 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       customerInfo,
       amount,
       payment: payment || 'momo_test',
-      status: 'pending',
+      status: 'Chờ Xử Lý',
       isLocked: false,
       createdAt: new Date()
     });
@@ -215,7 +215,7 @@ const cancelOrder = async (req, res) => {
 
     if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng của bạn' });
 
-    order.status = 'cancelled';
+    order.status = 'Đã huỷ đơn';
     await order.save();
 
     res.status(200).json({ message: 'Đơn hàng đã được hủy', order });
@@ -232,7 +232,7 @@ const cancelOrderByCode = async (req, res) => {
     const order = await Order.findOne({ orderId: req.params.orderId });
     if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng với mã này' });
 
-    order.status = 'cancelled';
+    order.status = 'Đã huỷ đơn';
     await order.save();
 
     res.status(200).json({ message: 'Đơn hàng đã được hủy theo mã', order });
