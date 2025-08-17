@@ -232,6 +232,22 @@ const cancelOrder = async (req, res) => {
     res.status(500).json({ message: 'Lỗi huỷ đơn hàng: ' + err.message });
   }
 };
+const cancelOrderByCode = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await Order.findOne({ orderId });
+
+    if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng với mã này' });
+
+    order.status = 'cancelled';
+    await order.save();
+
+    res.status(200).json({ message: 'Đơn hàng đã được hủy theo mã code', order });
+  } catch (err) {
+    console.error('❌ Lỗi hủy đơn hàng theo code:', err);
+    res.status(500).json({ message: 'Lỗi: ' + err.message });
+  }
+};
 
 const toggleOrderLock = async (req, res) => {
   try {
