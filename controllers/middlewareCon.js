@@ -12,7 +12,7 @@ const middlewareCon = {
           return res.status(403).json("Token hết hạn hoặc không hợp lệ");
         }
 
-        req.user = user;
+        req.user = user; // lưu user vào request
         next();
       });
     } else {
@@ -26,6 +26,17 @@ const middlewareCon = {
         next();
       } else {
         res.status(403).json("Bạn không có quyền thực hiện thao tác này");
+      }
+    });
+  },
+
+  // ✅ Thêm hàm isAdmin
+  isAdmin: (req, res, next) => {
+    middlewareCon.varifyToken(req, res, () => {
+      if (req.user && req.user.admin) {
+        next();
+      } else {
+        res.status(403).json("Chỉ admin mới được phép thực hiện thao tác này");
       }
     });
   }
