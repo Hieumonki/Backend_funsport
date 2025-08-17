@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/order');
+console.log('orderController:', orderController);
+
 const { varifyToken, isAdmin } = require('../controllers/middlewareCon');
 
 // ================= MoMo =================

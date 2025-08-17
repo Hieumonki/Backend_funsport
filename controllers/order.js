@@ -229,7 +229,7 @@ const cancelOrder = async (req, res) => {
  */
 const cancelOrderByCode = async (req, res) => {
   try {
-    const order = await Order.findOne({ orderId: req.params.orderCode });
+    const order = await Order.findOne({ orderId: req.params.orderId });
     if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng với mã này' });
 
     order.status = 'cancelled';
