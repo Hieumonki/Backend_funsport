@@ -37,6 +37,7 @@ export const createOrderAndPayWithMoMo = async (req, res) => {
     // Tạo order trong DB
     const newOrder = await Order.create({
       orderId: orderCode,
+       userId: req.user.id,
       cartItems: detailedCartItems,
       customerInfo,
       amount,
@@ -185,14 +186,31 @@ export const updateOrder = async (req, res) => {
 
 export const deleteOrder = async (req, res) => {
   try {
-    const deletedOrder = await Order.findOneAndDelete({ orderId: req.params.id });
+    const userId = req.user.id;
+    const deletedOrder = await Order.findOneAndDelete({ orderId: req.params.id, userId });
 
-    if (!deletedOrder) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
+    if (!deletedOrder) return res.status(404).json({ message: 'Không tìm thấy đơn hàng của bạn' });
 
     res.status(200).json({ message: 'Đã xóa đơn hàng' });
   } catch (err) {
     console.error('❌ Lỗi xóa đơn hàng:', err);
     res.status(500).json({ message: 'Lỗi xóa đơn hàng: ' + err.message });
+  }
+};
+export const cancelOrder = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const order = await Order.findOne({ orderId: req.params.id, userId });
+
+    if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng của bạn' });
+
+    order.status = 'chờ xử lý'; // hoặc 'cancelled'
+    await order.save();
+
+    res.status(200).json({ message: 'Đơn hàng đã được đánh dấu là chờ xử lý', order });
+  } catch (err) {
+    console.error('❌ Lỗi huỷ đơn hàng:', err);
+    res.status(500).json({ message: 'Lỗi huỷ đơn hàng: ' + err.message });
   }
 };
 
