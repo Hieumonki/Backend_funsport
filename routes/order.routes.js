@@ -17,6 +17,7 @@ router.get('/:id', varifyToken, orderController.getOrderById);
 router.patch('/:id/cancel', varifyToken, orderController.cancelOrder);
 
 // Orders admin
+router.get('/', orderController.getAllOrders);            // ✅ thêm route lấy tất cả orders
 router.put('/:id', orderController.updateOrder);
 router.delete('/:id', varifyToken, orderController.deleteOrder);
 router.patch('/:id/lock', orderController.toggleOrderLock);
