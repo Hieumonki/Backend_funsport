@@ -20,7 +20,7 @@ const OrderSchema = new mongoose.Schema({
   },
   amount: { type: Number, required: true },
   payment: { type: String, default: 'momo_test' },
-  status: { type: String, default: 'pending' }, // pending, paid, failed
+  status: { type: String, default: 'Chờ xử lý' }, // pending, paid, failed
   createdAt: { type: Date, default: Date.now }
 });
 
