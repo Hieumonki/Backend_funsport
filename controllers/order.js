@@ -5,11 +5,15 @@ const axios = require('axios');
 const Order = require('../model/order.js');
 const { product: Product } = require('../model/model.js');
 
-// 📌 Tạo đơn hàng và trả link MoMo test (payWithMethod)
+/**
+ * 📌 Tạo đơn hàng + trả link MoMo test
+ */
 const createOrderAndPayWithMoMo = async (req, res) => {
   try {
     const { cartItems, customerInfo, amount, payment } = req.body;
+    const userId = req.user?.id; // 👈 lấy từ middleware auth
 
+    if (!userId) return res.status(401).json({ message: 'Bạn phải đăng nhập để đặt hàng' });
     if (!Array.isArray(cartItems) || cartItems.length === 0) {
       return res.status(400).json({ message: 'Giỏ hàng trống' });
     }
@@ -17,7 +21,7 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       return res.status(400).json({ message: 'Thiếu thông tin khách hàng (fullName, phone)' });
     }
 
-    // Lấy chi tiết sản phẩm
+    // Lấy chi tiết sản phẩm từ DB
     const detailedCartItems = await Promise.all(
       cartItems.map(async (item) => {
         const product = await Product.findById(item.productId);
@@ -32,17 +36,18 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       })
     );
 
-    const orderCode = 'TEST-' + Date.now();
+    const orderCode = 'ORD-' + Date.now();
 
-    // Tạo order trong DB
+    // ✅ Lưu đơn hàng vào DB
     const newOrder = await Order.create({
       orderId: orderCode,
-      userId: req.user.id,
+      userId, // 👈 Lưu userId
       cartItems: detailedCartItems,
       customerInfo,
       amount,
       payment: payment || 'momo_test',
       status: 'pending',
+      isLocked: false,
       createdAt: new Date()
     });
 
@@ -53,13 +58,10 @@ const createOrderAndPayWithMoMo = async (req, res) => {
     const secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
     const requestId = orderCode;
     const orderId = orderCode;
-    const orderInfo = `Thanh toán đơn hàng test ${orderCode}`;
+    const orderInfo = `Thanh toán đơn hàng ${orderCode}`;
     const redirectUrl = 'http://localhost:4200/home';
     const ipnUrl = 'http://localhost:3000/api/momo-ipn';
     const extraData = '';
-    const partnerName = "Test Partner";
-    const storeId = "MomoTestStore";
-    const autoCapture = true;
     const requestType = 'payWithMethod';
 
     const rawSignature =
@@ -73,8 +75,6 @@ const createOrderAndPayWithMoMo = async (req, res) => {
 
     const requestBody = {
       partnerCode,
-      partnerName,
-      storeId,
       requestId,
       amount: String(amount),
       orderId,
@@ -83,7 +83,7 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       ipnUrl,
       extraData,
       requestType,
-      autoCapture,
+      autoCapture: true,
       signature,
       lang: 'vi'
     };
@@ -92,34 +92,32 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-    if (momoRes.data?.payUrl) {
-      return res.status(201).json({
-        message: 'Tạo đơn hàng test thành công',
-        order: newOrder,
-        payUrl: momoRes.data.payUrl
-      });
-    } else {
-      return res.status(500).json({ message: 'Không tạo được link thanh toán MoMo test' });
-    }
-
+    return res.status(201).json({
+      message: 'Tạo đơn hàng thành công',
+      order: newOrder,
+      payUrl: momoRes.data?.payUrl || null
+    });
   } catch (err) {
     console.error('❌ Lỗi khi tạo đơn hàng MoMo:', err);
     res.status(500).json({ message: 'Lỗi khi tạo đơn hàng: ' + err.message });
   }
 };
 
-// 📌 MoMo IPN handler
+/**
+ * 📌 MoMo IPN handler
+ */
 const momoIpnHandler = async (req, res) => {
   try {
     console.log('📥 Nhận IPN từ MoMo:', req.body);
     res.status(200).json({ message: 'IPN nhận thành công' });
   } catch (err) {
-    console.error('❌ Lỗi IPN MoMo:', err);
     res.status(500).json({ message: 'Lỗi IPN MoMo: ' + err.message });
   }
 };
 
-// 📌 Lấy tất cả đơn hàng
+/**
+ * 📌 Lấy tất cả đơn hàng (cho admin)
+ */
 const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
@@ -128,26 +126,17 @@ const getAllOrders = async (req, res) => {
         select: 'name price category image',
         populate: { path: 'category', select: 'name' }
       })
-      .sort({ createdAt: -1 })
-      .lean();
+      .sort({ createdAt: -1 });
 
-    const formattedOrders = orders.map(order => ({
-      ...order,
-      customerInfo: {
-        fullName: order.customerInfo?.fullName || '',
-        phone: order.customerInfo?.phone || '',
-        email: order.customerInfo?.email || '',
-        address: order.customerInfo?.address || ''
-      }
-    }));
-
-    res.status(200).json(formattedOrders);
+    res.status(200).json(orders);
   } catch (error) {
-    console.error('Error fetching orders:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
+/**
+ * 📌 Lấy đơn hàng theo user đang đăng nhập
+ */
 const getOrdersByUser = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -157,17 +146,17 @@ const getOrdersByUser = async (req, res) => {
         select: 'name price category image',
         populate: { path: 'category', select: 'name' }
       })
-      .sort({ createdAt: -1 })
-      .lean();
+      .sort({ createdAt: -1 });
 
     res.status(200).json(orders);
   } catch (err) {
-    console.error('❌ Lỗi lấy đơn hàng của user:', err);
     res.status(500).json({ message: 'Lỗi server: ' + err.message });
   }
 };
 
-// 📌 Lấy đơn hàng theo ID
+/**
+ * 📌 Lấy đơn hàng theo mã orderId
+ */
 const getOrderById = async (req, res) => {
   try {
     const order = await Order.findOne({ orderId: req.params.id })
@@ -177,14 +166,15 @@ const getOrderById = async (req, res) => {
       });
 
     if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
-
     res.status(200).json(order);
   } catch (err) {
-    console.error('❌ Lỗi lấy đơn hàng:', err);
     res.status(500).json({ message: 'Lỗi lấy đơn hàng: ' + err.message });
   }
 };
 
+/**
+ * 📌 Cập nhật đơn hàng
+ */
 const updateOrder = async (req, res) => {
   try {
     const updatedOrder = await Order.findOneAndUpdate(
@@ -194,28 +184,30 @@ const updateOrder = async (req, res) => {
     );
 
     if (!updatedOrder) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
-
     res.status(200).json(updatedOrder);
   } catch (err) {
-    console.error('❌ Lỗi cập nhật đơn hàng:', err);
     res.status(500).json({ message: 'Lỗi cập nhật đơn hàng: ' + err.message });
   }
 };
 
+/**
+ * 📌 Xóa đơn hàng của user (chỉ cho chủ sở hữu)
+ */
 const deleteOrder = async (req, res) => {
   try {
     const userId = req.user.id;
     const deletedOrder = await Order.findOneAndDelete({ orderId: req.params.id, userId });
 
     if (!deletedOrder) return res.status(404).json({ message: 'Không tìm thấy đơn hàng của bạn' });
-
     res.status(200).json({ message: 'Đã xóa đơn hàng' });
   } catch (err) {
-    console.error('❌ Lỗi xóa đơn hàng:', err);
     res.status(500).json({ message: 'Lỗi xóa đơn hàng: ' + err.message });
   }
 };
 
+/**
+ * 📌 Hủy đơn hàng (của user)
+ */
 const cancelOrder = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -223,32 +215,35 @@ const cancelOrder = async (req, res) => {
 
     if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng của bạn' });
 
-    order.status = 'chờ xử lý'; // hoặc 'cancelled'
+    order.status = 'cancelled';
     await order.save();
 
-    res.status(200).json({ message: 'Đơn hàng đã được đánh dấu là chờ xử lý', order });
+    res.status(200).json({ message: 'Đơn hàng đã được hủy', order });
   } catch (err) {
-    console.error('❌ Lỗi huỷ đơn hàng:', err);
     res.status(500).json({ message: 'Lỗi huỷ đơn hàng: ' + err.message });
   }
 };
+
+/**
+ * 📌 Hủy đơn hàng theo mã (cho admin)
+ */
 const cancelOrderByCode = async (req, res) => {
   try {
-    const { orderId } = req.params;
-    const order = await Order.findOne({ orderId });
-
+    const order = await Order.findOne({ orderId: req.params.orderCode });
     if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng với mã này' });
 
     order.status = 'cancelled';
     await order.save();
 
-    res.status(200).json({ message: 'Đơn hàng đã được hủy theo mã code', order });
+    res.status(200).json({ message: 'Đơn hàng đã được hủy theo mã', order });
   } catch (err) {
-    console.error('❌ Lỗi hủy đơn hàng theo code:', err);
     res.status(500).json({ message: 'Lỗi: ' + err.message });
   }
 };
 
+/**
+ * 📌 Toggle khóa/mở khóa đơn hàng (cho admin)
+ */
 const toggleOrderLock = async (req, res) => {
   try {
     const order = await Order.findOne({ orderId: req.params.id });
@@ -259,11 +254,13 @@ const toggleOrderLock = async (req, res) => {
 
     res.status(200).json({ message: order.isLocked ? 'Đã khóa đơn hàng' : 'Đã mở khóa đơn hàng' });
   } catch (err) {
-    console.error('❌ Lỗi khóa/mở khóa đơn hàng:', err);
     res.status(500).json({ message: 'Lỗi: ' + err.message });
   }
 };
 
+/**
+ * 📌 Doanh thu theo category
+ */
 const getRevenueByCategory = async (req, res) => {
   try {
     const revenue = await Order.aggregate([
@@ -307,7 +304,6 @@ const getRevenueByCategory = async (req, res) => {
   }
 };
 
-// 👉 Export chuẩn CommonJS
 module.exports = {
   createOrderAndPayWithMoMo,
   momoIpnHandler,
