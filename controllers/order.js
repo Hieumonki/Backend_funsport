@@ -1,12 +1,12 @@
 // controllers/order.js
 
-import crypto from 'crypto';
-import axios from 'axios';
-import Order from '../model/order.js';
-import { product as Product } from '../model/model.js';
+const crypto = require('crypto');
+const axios = require('axios');
+const Order = require('../model/order.js');
+const { product: Product } = require('../model/model.js');
 
 // 📌 Tạo đơn hàng và trả link MoMo test (payWithMethod)
-export const createOrderAndPayWithMoMo = async (req, res) => {
+const createOrderAndPayWithMoMo = async (req, res) => {
   try {
     const { cartItems, customerInfo, amount, payment } = req.body;
 
@@ -27,7 +27,7 @@ export const createOrderAndPayWithMoMo = async (req, res) => {
           name: product.name,
           price: product.price,
           quantity: item.quantity || 1,
-           image: product.image 
+          image: product.image
         };
       })
     );
@@ -37,7 +37,7 @@ export const createOrderAndPayWithMoMo = async (req, res) => {
     // Tạo order trong DB
     const newOrder = await Order.create({
       orderId: orderCode,
-       userId: req.user.id,
+      userId: req.user.id,
       cartItems: detailedCartItems,
       customerInfo,
       amount,
@@ -109,7 +109,7 @@ export const createOrderAndPayWithMoMo = async (req, res) => {
 };
 
 // 📌 MoMo IPN handler
-export const momoIpnHandler = async (req, res) => {
+const momoIpnHandler = async (req, res) => {
   try {
     console.log('📥 Nhận IPN từ MoMo:', req.body);
     res.status(200).json({ message: 'IPN nhận thành công' });
@@ -120,7 +120,7 @@ export const momoIpnHandler = async (req, res) => {
 };
 
 // 📌 Lấy tất cả đơn hàng
-export const getAllOrders = async (req, res) => {
+const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
       .populate({
@@ -129,9 +129,8 @@ export const getAllOrders = async (req, res) => {
         populate: { path: 'category', select: 'name' }
       })
       .sort({ createdAt: -1 })
-      .lean(); // trả dữ liệu dạng object thường
+      .lean();
 
-    // Đảm bảo trả về đầy đủ thông tin khách hàng
     const formattedOrders = orders.map(order => ({
       ...order,
       customerInfo: {
@@ -148,7 +147,8 @@ export const getAllOrders = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-export const getOrdersByUser = async (req, res) => {
+
+const getOrdersByUser = async (req, res) => {
   try {
     const userId = req.user.id;
     const orders = await Order.find({ userId })
@@ -168,7 +168,7 @@ export const getOrdersByUser = async (req, res) => {
 };
 
 // 📌 Lấy đơn hàng theo ID
-export const getOrderById = async (req, res) => {
+const getOrderById = async (req, res) => {
   try {
     const order = await Order.findOne({ orderId: req.params.id })
       .populate({
@@ -185,7 +185,7 @@ export const getOrderById = async (req, res) => {
   }
 };
 
-export const updateOrder = async (req, res) => {
+const updateOrder = async (req, res) => {
   try {
     const updatedOrder = await Order.findOneAndUpdate(
       { orderId: req.params.id },
@@ -202,7 +202,7 @@ export const updateOrder = async (req, res) => {
   }
 };
 
-export const deleteOrder = async (req, res) => {
+const deleteOrder = async (req, res) => {
   try {
     const userId = req.user.id;
     const deletedOrder = await Order.findOneAndDelete({ orderId: req.params.id, userId });
@@ -215,7 +215,8 @@ export const deleteOrder = async (req, res) => {
     res.status(500).json({ message: 'Lỗi xóa đơn hàng: ' + err.message });
   }
 };
-export const cancelOrder = async (req, res) => {
+
+const cancelOrder = async (req, res) => {
   try {
     const userId = req.user.id;
     const order = await Order.findOne({ orderId: req.params.id, userId });
@@ -232,7 +233,7 @@ export const cancelOrder = async (req, res) => {
   }
 };
 
-export const toggleOrderLock = async (req, res) => {
+const toggleOrderLock = async (req, res) => {
   try {
     const order = await Order.findOne({ orderId: req.params.id });
     if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
@@ -247,7 +248,7 @@ export const toggleOrderLock = async (req, res) => {
   }
 };
 
-export const getRevenueByCategory = async (req, res) => {
+const getRevenueByCategory = async (req, res) => {
   try {
     const revenue = await Order.aggregate([
       { $unwind: '$cartItems' },
@@ -288,4 +289,18 @@ export const getRevenueByCategory = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+};
+
+// 👉 Export chuẩn CommonJS
+module.exports = {
+  createOrderAndPayWithMoMo,
+  momoIpnHandler,
+  getAllOrders,
+  getOrdersByUser,
+  getOrderById,
+  updateOrder,
+  deleteOrder,
+  cancelOrder,
+  toggleOrderLock,
+  getRevenueByCategory
 };
