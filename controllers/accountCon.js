@@ -34,7 +34,7 @@ const accountCon = {
     try {
       console.log("📩 Dữ liệu gửi đến:", req.body);
 
-      const { name, email, phone, password } = req.body;
+      const { name,fullName, email, phone, password } = req.body;
 
       // Kiểm tra trùng tên
       const existingName = await account.findOne({ name });
@@ -59,6 +59,7 @@ const accountCon = {
 
       const newAccount = new account({
         name,
+        fullName,
         email,
         phone,
         password: hashedPassword
