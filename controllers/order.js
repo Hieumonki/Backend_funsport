@@ -317,6 +317,7 @@ module.exports = {
   updateOrder,
   deleteOrder,
   cancelOrder,
+  cancelOrderByCode,
   toggleOrderLock,
   getRevenueByCategory
 };
