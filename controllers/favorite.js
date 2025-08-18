@@ -1,6 +1,7 @@
 // controllers/favoriteCon.js
-import Favorite from "../model/favorite.js";
-import Product from "../model/model.js";
+const Favorite = require('../model/favorite.js');
+const { varifyToken } = require("../controllers/middlewareCon");
+
 
 // ✅ Lấy danh sách sản phẩm yêu thích của user
 export const getFavorites = async (req, res) => {
