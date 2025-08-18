@@ -27,6 +27,9 @@ const newsRoutes = require('./routes/news.routes');
 const orderRoutes = require('./routes/order.routes');
 const bestSellerRoute = require('./routes/bestseller');
 const contactRouter = require('./routes/contact');
+const favoriteRoutes = require("./routes/favorite");
+
+
 
 app.use(express.json());
 app.use(bodyParser.json({ limit: "50mb" }));
@@ -74,7 +77,7 @@ app.use('/v1/orders', orderRoutes);
 app.use('/v1/news', newsRoutes);
 app.use('/v1/contact', contactRouter);
 app.use('/v1/bestseller', bestSellerRoute);
-
+app.use("/v1/favorites", favoriteRoutes);
 // Upload ảnh
 app.post("/uploads", upload.single("image"), (req, res) => {
   if (!req.file) {
