@@ -1,5 +1,5 @@
 const express = require('express');
-const { getFavorites, addFavorite, removeFavorite } = require('../controllers/favoriteCon.js');
+const { getFavorites, addFavorite, removeFavorite } = require('../controllers/favorite.js');
 const { varifyToken } = require('../controllers/middlewareCon.js');
 
 const router = express.Router();
