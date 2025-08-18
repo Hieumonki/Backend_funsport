@@ -1,6 +1,6 @@
 // controllers/favoriteCon.js
-import Favorite from "../models/favorite.js";
-import Product from "../models/product.js";
+import Favorite from "../model/favorite.js";
+import Product from "../model/model.js";
 
 // ✅ Lấy danh sách sản phẩm yêu thích của user
 export const getFavorites = async (req, res) => {
