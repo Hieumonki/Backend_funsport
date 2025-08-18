@@ -1,12 +1,12 @@
 // routes/favorite.js
-import express from "express";
-import { getFavorites, addFavorite, removeFavorite } from "../controllers/favorite.js";
-import { varifyToken } from "../controllers/middlewareCon.js";
+const express = require("express");
+const { getFavorites, addFavorite, removeFavorite } = require("../controllers/favorite.js");
+const { varifyToken } = require("../controllers/middlewareCon.js");
 
 const router = express.Router();
 
-router.get("/", varifyToken, getFavorites);          // GET /api/favorites
-router.post("/", varifyToken, addFavorite);          // POST /api/favorites
-router.delete("/:id", varifyToken, removeFavorite);  // DELETE /api/favorites/:id
+router.get("/", varifyToken, getFavorites);
+router.post("/", varifyToken, addFavorite);
+router.delete("/:id", varifyToken, removeFavorite);
 
-export default router;
+module.exports = router;
