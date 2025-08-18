@@ -4,7 +4,7 @@ const { varifyToken } = require("./middlewareCon.js");
 
 
 // ✅ Lấy danh sách sản phẩm yêu thích của user
-export const getFavorites = async (req, res) => {
+ const getFavorites = async (req, res) => {
   try {
     const favorites = await Favorite.find({ userId: req.user.id })
       .populate("productId");
@@ -15,7 +15,7 @@ export const getFavorites = async (req, res) => {
 };
 
 // ✅ Thêm sản phẩm vào yêu thích
-export const addFavorite = async (req, res) => {
+ const addFavorite = async (req, res) => {
   try {
     const { productId } = req.body;
     const exists = await Favorite.findOne({ userId: req.user.id, productId });
@@ -31,7 +31,7 @@ export const addFavorite = async (req, res) => {
 };
 
 // ✅ Xoá sản phẩm khỏi yêu thích
-export const removeFavorite = async (req, res) => {
+ const removeFavorite = async (req, res) => {
   try {
     const { id } = req.params; // id = productId
     await Favorite.findOneAndDelete({ userId: req.user.id, productId: id });
