@@ -1,6 +1,6 @@
 // controllers/favoriteCon.js
 const Favorite = require('../model/favorite.js');
-const { varifyToken } = require("../controllers/middlewareCon");
+const { varifyToken } = require("../controllers/middlewareCon.js");
 
 
 // ✅ Lấy danh sách sản phẩm yêu thích của user
