@@ -1,11 +1,11 @@
-const express = require('express');
-const { getFavorites, addFavorite, removeFavorite } = require('../controllers/favorite.js');
-const { varifyToken } = require('../controllers/middlewareCon.js');
-
+const express = require("express");
 const router = express.Router();
+const { addFavorite, getFavoritesByUser, removeFavorite } = require("../controllers/favoriteController");
+const { varifyToken } = require("../middlewares/authMiddleware");
 
-router.get('/', varifyToken, getFavorites);
-router.post('/', varifyToken, addFavorite);
-router.delete('/:id', varifyToken, removeFavorite);
+// User phải đăng nhập mới dùng được
+router.post("/", varifyToken, addFavorite);
+router.get("/", varifyToken, getFavoritesByUser);
+router.delete("/:productId", varifyToken, removeFavorite);
 
 module.exports = router;

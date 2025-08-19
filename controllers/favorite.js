@@ -1,59 +1,46 @@
-// controllers/favoriteCon.js
-const Favorite = require('../model/favorite.js');
+const Favorite = require("../model/favorite");
 
-// 📌 Lấy danh sách favorite của user từ token
-const getFavorites = async (req, res) => {
-  try {
-    const favorites = await Favorite.find({ userId: req.user.id });
-    res.json(favorites);
-  } catch (err) {
-    res.status(500).json({ message: 'Lỗi server', error: err.message });
-  }
-};
-
-// 📌 Thêm sản phẩm yêu thích (lưu trực tiếp name, image, price)
+// Thêm sản phẩm yêu thích
 const addFavorite = async (req, res) => {
   try {
-    const { name, image, price } = req.body;
+    const userId = req.user.id; // lấy từ token
+    const { productId, name, image, price } = req.body;
 
-    if (!name || !image || !price) {
-      return res.status(400).json({ message: 'Thiếu thông tin sản phẩm' });
-    }
-
-    // Check trùng
-    const exists = await Favorite.findOne({ userId: req.user.id, name });
+    const exists = await Favorite.findOne({ userId, productId });
     if (exists) {
-      return res.status(400).json({ message: 'Sản phẩm đã có trong yêu thích' });
+      return res.status(400).json({ message: "Sản phẩm đã có trong danh sách yêu thích" });
     }
 
-    const favorite = new Favorite({
-      userId: req.user.id,
-      name,
-      image,
-      price
-    });
-
+    const favorite = new Favorite({ userId, productId, name, image, price });
     await favorite.save();
-    res.json(favorite);
+    res.status(201).json(favorite);
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi server', error: err.message });
+    res.status(500).json({ message: "Lỗi server", error: err });
   }
 };
 
-// 📌 Xoá sản phẩm khỏi favorite theo _id
+// Lấy danh sách yêu thích
+const getFavoritesByUser = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const favorites = await Favorite.find({ userId });
+    res.json(favorites);
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi server", error: err });
+  }
+};
+
+// Xoá sản phẩm yêu thích
 const removeFavorite = async (req, res) => {
   try {
-    const { id } = req.params; // id = _id của favorite
-    const deleted = await Favorite.findOneAndDelete({ userId: req.user.id, _id: id });
+    const userId = req.user.id;
+    const { productId } = req.params;
 
-    if (!deleted) {
-      return res.status(404).json({ message: 'Không tìm thấy sản phẩm trong yêu thích' });
-    }
-
-    res.json({ message: 'Xoá thành công' });
+    await Favorite.deleteOne({ userId, productId });
+    res.json({ message: "Đã xoá khỏi yêu thích" });
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi server', error: err.message });
+    res.status(500).json({ message: "Lỗi server", error: err });
   }
 };
 
-module.exports = { getFavorites, addFavorite, removeFavorite };
+module.exports = { addFavorite, getFavoritesByUser, removeFavorite };
