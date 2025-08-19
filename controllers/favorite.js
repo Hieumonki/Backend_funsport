@@ -31,12 +31,16 @@ const getFavoritesByUser = async (req, res) => {
 };
 
 // Xoá sản phẩm yêu thích
+// ✅ xoá theo _id
 const removeFavorite = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { productId } = req.params;
+    const { id } = req.params;
 
-    await Favorite.deleteOne({ userId, productId });
+    const deleted = await Favorite.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Không tìm thấy favorite" });
+    }
+
     res.json({ message: "Đã xoá khỏi yêu thích" });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err });

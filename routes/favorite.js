@@ -6,6 +6,7 @@ const { varifyToken } = require(".././controllers/middlewareCon");
 // User phải đăng nhập mới dùng được
 router.post("/", varifyToken, addFavorite);
 router.get("/", varifyToken, getFavoritesByUser);
-router.delete("/:productId", varifyToken, removeFavorite);
+router.delete('/:id', removeFavorite);
+
 
 module.exports = router;
