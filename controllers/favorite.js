@@ -11,24 +11,23 @@ const getFavorites = async (req, res) => {
   }
 };
 
-// 📌 Thêm sản phẩm yêu thích (lưu cả productId để check chính xác)
+// 📌 Thêm sản phẩm yêu thích (lưu trực tiếp name, image, price)
 const addFavorite = async (req, res) => {
   try {
-    const { productId, name, image, price } = req.body;
+    const { name, image, price } = req.body;
 
-    if (!productId || !name || !image || !price) {
+    if (!name || !image || !price) {
       return res.status(400).json({ message: 'Thiếu thông tin sản phẩm' });
     }
 
-    // Check trùng theo userId + productId
-    const exists = await Favorite.findOne({ userId: req.user.id, productId });
+    // Check trùng
+    const exists = await Favorite.findOne({ userId: req.user.id, name });
     if (exists) {
       return res.status(400).json({ message: 'Sản phẩm đã có trong yêu thích' });
     }
 
     const favorite = new Favorite({
       userId: req.user.id,
-      productId,   // ✅ Lưu thêm productId
       name,
       image,
       price
@@ -41,14 +40,11 @@ const addFavorite = async (req, res) => {
   }
 };
 
-// 📌 Xoá sản phẩm khỏi favorite theo _id (hoặc theo productId nếu cần)
+// 📌 Xoá sản phẩm khỏi favorite theo _id
 const removeFavorite = async (req, res) => {
   try {
-    const { id } = req.params; // id = _id của favorite hoặc productId
-    const deleted = await Favorite.findOneAndDelete({
-      userId: req.user.id,
-      $or: [{ _id: id }, { productId: id }]
-    });
+    const { id } = req.params; // id = _id của favorite
+    const deleted = await Favorite.findOneAndDelete({ userId: req.user.id, _id: id });
 
     if (!deleted) {
       return res.status(404).json({ message: 'Không tìm thấy sản phẩm trong yêu thích' });
