@@ -1,6 +1,8 @@
 const { account, theme } = require("../model/model");
+const bcrypt = require("bcryptjs");
 
 const userCon = {
+  // 📌 Lấy toàn bộ user
   getUser: async (req, res) => {
     try {
       const users = await account.find().populate("products");
@@ -10,6 +12,7 @@ const userCon = {
     }
   },
 
+  // 📌 Lấy 1 user theo id
   getAnUser: async (req, res) => {
     try {
       const user = await account.findById(req.params.id).populate("products");
@@ -20,6 +23,7 @@ const userCon = {
     }
   },
 
+  // 📌 Update user (admin hoặc update người khác)
   updateUser: async (req, res) => {
     try {
       const updated = await account.findByIdAndUpdate(
@@ -33,6 +37,7 @@ const userCon = {
     }
   },
 
+  // 📌 Xoá 1 user
   deleteUser: async (req, res) => {
     try {
       const user = await account.findById(req.params.id);
@@ -48,6 +53,7 @@ const userCon = {
     }
   },
 
+  // 📌 Xoá nhiều user
   deleteUsers: async (req, res) => {
     try {
       const { userIds } = req.body;
@@ -61,6 +67,7 @@ const userCon = {
     }
   },
 
+  // 📊 Thống kê user
   getUserStats: async (req, res) => {
     try {
       const users = await account.find();
@@ -83,8 +90,7 @@ const userCon = {
     }
   },
 
-  
-
+  // 📌 Khoá / mở khoá user
   toggleLockUser: async (req, res) => {
     try {
       const { lockReason } = req.body;
@@ -102,13 +108,13 @@ const userCon = {
     }
   },
 
+  // 📌 Khoá / mở khoá product của user
   toggleProductLock: async (req, res) => {
     try {
       const { productId } = req.body;
       const user = await account.findById(req.params.id);
       if (!user) return res.status(404).json("Không tìm thấy người dùng");
 
-      // Giả sử products là mảng objectId tham chiếu tới product
       if (!user.products) user.products = [];
 
       const hasProduct = user.products.includes(productId);
@@ -125,18 +131,47 @@ const userCon = {
     }
   },
 
+  // 📌 Lấy thông tin cá nhân user đang đăng nhập
   getMe: async (req, res) => {
-  try {
-    const user = await account.findById(req.user.id);
-    if (!user) return res.status(404).json("Không tìm thấy người dùng");
+    try {
+      const user = await account.findById(req.user.id).select("-password");
+      if (!user) return res.status(404).json("Không tìm thấy người dùng");
+      res.status(200).json(user);
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi khi lấy thông tin người dùng", error });
+    }
+  },
 
-    res.status(200).json(user);
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi khi lấy thông tin người dùng", error });
-  }
-},
+  // 📌 Update thông tin cá nhân user
+  updateMe: async (req, res) => {
+    try {
+      const updatedUser = await account.findByIdAndUpdate(
+        req.user.id,
+        { $set: req.body },
+        { new: true }
+      ).select("-password");
+      res.status(200).json({ message: "Cập nhật thành công", user: updatedUser });
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi khi cập nhật", error });
+    }
+  },
 
+  // 📌 Đổi mật khẩu
+  changePassword: async (req, res) => {
+    try {
+      const { password } = req.body;
+      if (!password) return res.status(400).json({ message: "Mật khẩu không được bỏ trống" });
 
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      await account.findByIdAndUpdate(req.user.id, { password: hashedPassword });
+      res.status(200).json({ message: "Đổi mật khẩu thành công" });
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi khi đổi mật khẩu", error });
+    }
+  },
+
+  // 📌 Báo cáo vi phạm
   reportViolation: async (req, res) => {
     try {
       const { violationType } = req.body;
