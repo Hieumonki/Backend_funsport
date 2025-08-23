@@ -157,19 +157,30 @@ const userCon = {
   },
 
   // 📌 Đổi mật khẩu
-  changePassword: async (req, res) => {
-    try {
-      const { password } = req.body;
-      if (!password) return res.status(400).json({ message: "Mật khẩu không được bỏ trống" });
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      await account.findByIdAndUpdate(req.user.id, { password: hashedPassword });
-      res.status(200).json({ message: "Đổi mật khẩu thành công" });
-    } catch (error) {
-      res.status(500).json({ message: "Lỗi khi đổi mật khẩu", error });
+changePassword: async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ message: "Vui lòng nhập đầy đủ mật khẩu" });
     }
-  },
+
+    const user = await account.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Mật khẩu cũ không đúng" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Đổi mật khẩu thành công" });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi đổi mật khẩu", error });
+  }
+},
 
   // 📌 Báo cáo vi phạm
   reportViolation: async (req, res) => {
