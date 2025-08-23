@@ -1,5 +1,22 @@
 const { account, theme } = require("../model/model");
 const bcrypt = require("bcryptjs");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+
+// --- Multer config upload avatar ---
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = './uploads/avatars';
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${req.user.id}-${Date.now()}${ext}`);
+  }
+});
+const uploadAvatar = multer({ storage });
 
 const userCon = {
   // 📌 Lấy toàn bộ user
@@ -23,7 +40,7 @@ const userCon = {
     }
   },
 
-  // 📌 Update user (admin hoặc update người khác)
+  // 📌 Update user (admin)
   updateUser: async (req, res) => {
     try {
       const updated = await account.findByIdAndUpdate(
@@ -43,9 +60,7 @@ const userCon = {
       const user = await account.findById(req.params.id);
       if (!user) return res.status(404).json("Không tìm thấy người dùng");
 
-      // Xoá toàn bộ theme của user nếu có
       await theme.deleteMany({ author: user._id });
-
       await account.findByIdAndDelete(req.params.id);
       res.status(200).json("Xoá thành công");
     } catch (error) {
@@ -83,7 +98,6 @@ const userCon = {
           return acc + spam + cancel + ghost;
         }, 0)
       };
-
       res.status(200).json(stats);
     } catch (error) {
       res.status(500).json({ message: "Lỗi khi lấy thống kê", error });
@@ -145,9 +159,13 @@ const userCon = {
   // 📌 Update thông tin cá nhân user
   updateMe: async (req, res) => {
     try {
+      const updateData = { ...req.body };
+      if (req.file) {
+        updateData.avatar = `/uploads/avatars/${req.file.filename}`;
+      }
       const updatedUser = await account.findByIdAndUpdate(
         req.user.id,
-        { $set: req.body },
+        { $set: updateData },
         { new: true }
       ).select("-password");
       res.status(200).json({ message: "Cập nhật thành công", user: updatedUser });
@@ -157,30 +175,30 @@ const userCon = {
   },
 
   // 📌 Đổi mật khẩu
-changePassword: async (req, res) => {
-  try {
-    const { oldPassword, newPassword } = req.body;
-    if (!oldPassword || !newPassword) {
-      return res.status(400).json({ message: "Vui lòng nhập đầy đủ mật khẩu" });
+  changePassword: async (req, res) => {
+    try {
+      const { oldPassword, newPassword } = req.body;
+      if (!oldPassword || !newPassword) {
+        return res.status(400).json({ message: "Vui lòng nhập đầy đủ mật khẩu" });
+      }
+
+      const user = await account.findById(req.user.id);
+      if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+
+      const isMatch = await bcrypt.compare(oldPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: "Mật khẩu cũ không đúng" });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      user.password = hashedPassword;
+      await user.save();
+
+      res.status(200).json({ message: "Đổi mật khẩu thành công" });
+    } catch (error) {
+      res.status(500).json({ message: "Lỗi khi đổi mật khẩu", error });
     }
-
-    const user = await account.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
-
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Mật khẩu cũ không đúng" });
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    await user.save();
-
-    res.status(200).json({ message: "Đổi mật khẩu thành công" });
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi khi đổi mật khẩu", error });
-  }
-},
+  },
 
   // 📌 Báo cáo vi phạm
   reportViolation: async (req, res) => {
@@ -211,4 +229,4 @@ changePassword: async (req, res) => {
   },
 };
 
-module.exports = userCon;
+module.exports = { userCon, uploadAvatar };
