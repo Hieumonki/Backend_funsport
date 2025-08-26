@@ -158,19 +158,30 @@ const userCon = {
 
 updateMe: async (req, res) => {
   try {
+    // Lấy user hiện tại từ DB
+    const user = await account.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy user" });
+    }
+
+    // Chuẩn bị dữ liệu cập nhật
     const updateData = {};
 
     if (req.body.fullName) updateData.fullName = req.body.fullName;
     if (req.body.email) updateData.email = req.body.email;
 
-    // ✅ chỉ thêm mới nếu có nhập
+    // ✅ phone: nếu chưa có hoặc có rồi thì cho phép ghi đè
     if (req.body.phone) updateData.phone = req.body.phone;
+
+    // ✅ address: nếu chưa có hoặc có rồi thì cho phép ghi đè
     if (req.body.address) updateData.address = req.body.address;
 
+    // ✅ avatar
     if (req.file) {
       updateData.avatar = `/uploads/avatars/${req.file.filename}`;
     }
 
+    // Thực hiện update
     const updatedUser = await account.findByIdAndUpdate(
       req.user.id,
       { $set: updateData },
@@ -179,9 +190,11 @@ updateMe: async (req, res) => {
 
     res.status(200).json(updatedUser);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Lỗi khi cập nhật", error });
   }
 },
+
 
 
 
