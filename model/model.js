@@ -1,19 +1,6 @@
 const mongoose = require("mongoose");
 const mongoosePaginate = require("mongoose-paginate-v2");
 
-// ===== Category =====
-const categorySchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    minlength: 6,
-    unique: true,
-  },
-  image: String,
-});
-categorySchema.plugin(mongoosePaginate);
-
-// ===== Product =====
 const productSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -22,38 +9,62 @@ const productSchema = new mongoose.Schema({
   },
   desc: String,
   category: { type: mongoose.Schema.Types.ObjectId, ref: "category" },
-  image: String,
+  image: [String],
   price: Number,
+  quantity: Number,
+  minStock: Number,
+  color: {
+    type: String,
+    default: '#000000',
+    validate: {
+      validator: function(v) {
+        return !v || /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(v);
+      },
+      message: 'Color must be a valid hex color (e.g., #FF0000)'
+    }
+  },
   tab: String,
-
+  describe: String,
+  status: {
+    type: String,
+    enum: ["instock", "lowstock", "outofstock"],
+    default: "instock",
+  },
   author: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "author",
   },
-});
+}, { timestamps: true });
 productSchema.plugin(mongoosePaginate);
 
-// ===== ProductSell =====
-const productSellSchema = new mongoose.Schema({
+const categorySchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true,
+    minlength: 6,
+    unique: true,
   },
   image: String,
-  price: Number,
-  priceold: Number,
-  category: String,
-  createdAt: {
-    type: Date,
-    default: Date.now,
+}, { timestamps: true });
+categorySchema.plugin(mongoosePaginate);
+
+const themeSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    default: 'no name',
+    trim: true,
+    minlength: 1,
   },
-});
-productSellSchema.plugin(mongoosePaginate);
+  desc: String,
+  linkimage: String,
+  linkproduct: String,
+  author: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "author",
+  },
+}, { timestamps: true });
+themeSchema.plugin(mongoosePaginate);
 
-// Model
-
-// ===== Author =====
 const authorSchema = new mongoose.Schema({
   id: String,
   name: String,
@@ -69,28 +80,9 @@ const authorSchema = new mongoose.Schema({
       ref: "theme",
     },
   ],
-});
+}, { timestamps: true });
 authorSchema.plugin(mongoosePaginate);
 
-// ===== Theme =====
-const themeSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    default: 'no name',
-    trim: true,
-    minlength: 1,
-  },
-  desc: String,
-  linkimage: String,
-  linkproduct: String,
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "author",
-  },
-});
-themeSchema.plugin(mongoosePaginate);
-
-// ===== Account/User =====
 const accountSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -118,17 +110,12 @@ const accountSchema = new mongoose.Schema({
     required: true,
     minlength: 6,
   },
-
   avatar: { type: String, default: "" },
-
-
   admin: {
     type: Boolean,
     default: false,
   },
   products: [{ type: mongoose.Schema.Types.ObjectId, ref: "product" }],
-
-  // Thống kê
   status: {
     type: String,
     enum: ["active", "locked", "pending"],
@@ -149,8 +136,6 @@ const accountSchema = new mongoose.Schema({
 }, { timestamps: true });
 accountSchema.plugin(mongoosePaginate);
 
-
-// ===== News =====
 const newsSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -166,7 +151,6 @@ const newsSchema = new mongoose.Schema({
 });
 newsSchema.plugin(mongoosePaginate);
 
-// ===== Stats =====
 const statsSchema = new mongoose.Schema({
   totalRevenue: {
     type: String,
@@ -195,13 +179,41 @@ const statsSchema = new mongoose.Schema({
 });
 statsSchema.plugin(mongoosePaginate);
 
+const productSellSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  image: String,
+  price: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  priceold: {
+    type: Number,
+    min: 0
+  },
+  category: String,
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+productSellSchema.plugin(mongoosePaginate);
 
-// ===== Best Seller =====
 const bestSellerSchema = new mongoose.Schema({
   name: String,
   image: String,
-  price: Number,
-  priceold: Number,
+  price: {
+    type: Number,
+    min: 0
+  },
+  priceold: {
+    type: Number,
+    min: 0
+  },
   category: String,
   tab: String,
   createdAt: {
@@ -209,28 +221,16 @@ const bestSellerSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+bestSellerSchema.plugin(mongoosePaginate);
 
-
-const bestseller = mongoose.model("bestseller", bestSellerSchema);
-// ===== Models =====
-const category = mongoose.model("category", categorySchema);
-const product = mongoose.model("product", productSchema);
-const theme = mongoose.model("theme", themeSchema);
-const author = mongoose.model("author", authorSchema);
-const account = mongoose.model("account", accountSchema);
-const news = mongoose.model("news", newsSchema);
-const stats = mongoose.model("stats", statsSchema);
-const productsell = mongoose.model("productsell", productSellSchema);
-
-// ===== Export =====
 module.exports = {
-  category,
-  product,
-  theme,
-  author,
-  account,
-  news,
-  stats,
-  productsell,
-  bestseller,
+  category: mongoose.model("category", categorySchema),
+  product: mongoose.model("product", productSchema),
+  theme: mongoose.model("theme", themeSchema),
+  author: mongoose.model("author", authorSchema),
+  account: mongoose.model("account", accountSchema),
+  news: mongoose.model("news", newsSchema),
+  stats: mongoose.model("stats", statsSchema),
+  productsell: mongoose.model("productsell", productSellSchema),
+  bestseller: mongoose.model("bestseller", bestSellerSchema),
 };

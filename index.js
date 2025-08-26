@@ -29,10 +29,8 @@ const bestSellerRoute = require('./routes/bestseller');
 const contactRouter = require('./routes/contact');
 const favoriteRoutes = require("./routes/favorite");
 
-
-
-app.use(express.json());
 app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 app.use(cors());
 app.options('*', cors());
@@ -78,7 +76,7 @@ app.use('/v1/news', newsRoutes);
 app.use('/v1/contact', contactRouter);
 app.use('/v1/bestseller', bestSellerRoute);
 app.use("/v1/favorites", favoriteRoutes);
-// Upload ảnh
+// Upload ảnh (keep this for standalone uploads if needed)
 app.post("/uploads", upload.single("image"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "Vui lòng tải lên một tệp ảnh." });

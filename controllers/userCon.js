@@ -156,23 +156,24 @@ const userCon = {
     }
   },
 
-  // 📌 Update thông tin cá nhân user
-  updateMe: async (req, res) => {
-    try {
-      const updateData = { ...req.body };
-      if (req.file) {
-        updateData.avatar = `/uploads/avatars/${req.file.filename}`;
-      }
-      const updatedUser = await account.findByIdAndUpdate(
-        req.user.id,
-        { $set: updateData },
-        { new: true }
-      ).select("-password");
-      res.status(200).json({ message: "Cập nhật thành công", user: updatedUser });
-    } catch (error) {
-      res.status(500).json({ message: "Lỗi khi cập nhật", error });
+ updateMe: async (req, res) => {
+  try {
+    const updateData = { ...req.body };
+    if (req.file) {
+      updateData.avatar = `/uploads/avatars/${req.file.filename}`;
     }
-  },
+    const updatedUser = await account.findByIdAndUpdate(
+      req.user.id,
+      { $set: updateData },
+      { new: true }
+    ).select("-password");
+
+    res.status(200).json(updatedUser); // ✅ nên trả thẳng user
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi cập nhật", error });
+  }
+},
+
 
   // 📌 Đổi mật khẩu
   changePassword: async (req, res) => {
