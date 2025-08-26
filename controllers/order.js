@@ -31,7 +31,8 @@ const createOrderAndPayWithMoMo = async (req, res) => {
           name: product.name,
           price: product.price,
           quantity: item.quantity || 1,
-          image: product.image
+      image: Array.isArray(product.image) ? product.image[0] : product.image
+
         };
       })
     );
