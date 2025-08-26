@@ -170,7 +170,7 @@ const userCon = {
       if (req.body.address) user.address = req.body.address;
 
       // Avatar
-      if (req.file) user.avatar = `/uploads/avatars/${req.file.filename}`;
+      if (req.file) user.avatar = `/uploads/users/${req.file.filename}`;
 
       await user.save();
       res.status(200).json(user); // trả thẳng user
