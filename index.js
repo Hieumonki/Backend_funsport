@@ -32,7 +32,11 @@ const favoriteRoutes = require("./routes/favorite");
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
-app.use(cors());
+app.use(cors({
+  origin: ["https://funsport.click"],
+  credentials: true,
+}));
+
 app.options('*', cors());
 app.use(morgan("common"));
 
@@ -102,8 +106,9 @@ app.post("/v1/orders/momo-pay", async (req, res) => {
     const secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
     const requestId = partnerCode + Date.now();
     const orderId = requestId;
-    const redirectUrl = "http://localhost:4200/payment-success"; // Frontend nhận kết quả
-    const ipnUrl = "http://localhost:8000/v1/orders/momo-ipn";
+    const redirectUrl = process.env.MOMO_REDIRECT_URL;
+    const ipnUrl = process.env.MOMO_IPN_URL;
+
     const requestType = "captureWallet";
     const extraData = "";
 
@@ -176,6 +181,7 @@ app.post("/v1/orders/momo-ipn", (req, res) => {
 });
 /* ============================================================= */
 
-app.listen(8000, () => {
-  console.log("Server đang chạy tại http://localhost:8000");
+const PORT = process.env.PORT || 8000;
+app.listen(PORT, () => {
+  console.log(`Server đang chạy tại cổng ${PORT}`);
 });
