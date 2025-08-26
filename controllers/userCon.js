@@ -156,23 +156,33 @@ const userCon = {
     }
   },
 
- updateMe: async (req, res) => {
+updateMe: async (req, res) => {
   try {
-    const updateData = { ...req.body };
+    const updateData = {};
+
+    if (req.body.fullName) updateData.fullName = req.body.fullName;
+    if (req.body.email) updateData.email = req.body.email;
+
+    // ✅ chỉ thêm mới nếu có nhập
+    if (req.body.phone) updateData.phone = req.body.phone;
+    if (req.body.address) updateData.address = req.body.address;
+
     if (req.file) {
       updateData.avatar = `/uploads/avatars/${req.file.filename}`;
     }
+
     const updatedUser = await account.findByIdAndUpdate(
       req.user.id,
       { $set: updateData },
       { new: true }
     ).select("-password");
 
-    res.status(200).json(updatedUser); // ✅ nên trả thẳng user
+    res.status(200).json(updatedUser);
   } catch (error) {
     res.status(500).json({ message: "Lỗi khi cập nhật", error });
   }
 },
+
 
 
   // 📌 Đổi mật khẩu
