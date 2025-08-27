@@ -76,6 +76,7 @@ app.use('/v1/news', newsRoutes);
 app.use('/v1/contact', contactRouter);
 app.use('/v1/bestseller', bestSellerRoute);
 app.use("/v1/favorites", favoriteRoutes);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // Upload ảnh (keep this for standalone uploads if needed)
 app.post("/uploads", upload.single("image"), (req, res) => {
   if (!req.file) {

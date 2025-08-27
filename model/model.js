@@ -110,6 +110,15 @@ const accountSchema = new mongoose.Schema({
     required: true,
     minlength: 6,
   },
+    phone: {
+    type: String,
+    match: [/^[0-9]{9,12}$/, "Số điện thoại không hợp lệ"], // 9-12 số
+  },
+  address: {
+    type: String,
+    maxlength: 255,
+    trim: true,
+  },
   avatar: { type: String, default: "" },
   admin: {
     type: Boolean,
