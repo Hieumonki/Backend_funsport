@@ -180,44 +180,51 @@ const productCon = {
   },
 
   // Get all products
-  getAllproduct: async (req, res) => {
-    try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
-      const skip = (page - 1) * limit;
-       if (keyword) {
-      filter.name = { $regex: keyword, $options: "i" }; // không phân biệt hoa thường
-      // Nếu muốn tìm cả trong desc thì dùng:
-      // filter.$or = [
-      //   { name: { $regex: keyword, $options: "i" } },
-      //   { desc: { $regex: keyword, $options: "i" } }
-      // ];
+ // Get all products with search & filter
+getAllproduct: async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // ✅ lấy query param ra trước
+    const { keyword, category: categoryId } = req.query;
+    let filter = {};
+
+    // ✅ lọc theo keyword (tên hoặc mô tả)
+    if (keyword) {
+      filter.$or = [
+        { name: { $regex: keyword, $options: "i" } },
+        { desc: { $regex: keyword, $options: "i" } }
+      ];
     }
 
     // ✅ lọc theo category
     if (categoryId) {
       filter.category = categoryId;
     }
-      const products = await product.find()
-        .populate('category', 'name')
-        .populate('author', 'name')
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 });
 
-      const total = await product.countDocuments();
+    const products = await product.find(filter)
+      .populate("category", "name")
+      .populate("author", "name")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
 
-      res.status(200).json({
-        products,
-        totalPages: Math.ceil(total / limit),
-        currentPage: page,
-        total
-      });
-    } catch (error) {
-      console.error("Error getting all products:", error);
-      res.status(500).json({ message: "Server error", error: error.message });
-    }
-  },
+    const total = await product.countDocuments(filter);
+
+    res.status(200).json({
+      products,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
+    });
+  } catch (error) {
+    console.error("Error getting all products:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+},
+
 
   // Get a single product
   getAnproduct: async (req, res) => {
