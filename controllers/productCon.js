@@ -185,7 +185,19 @@ const productCon = {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
-      
+       if (keyword) {
+      filter.name = { $regex: keyword, $options: "i" }; // không phân biệt hoa thường
+      // Nếu muốn tìm cả trong desc thì dùng:
+      // filter.$or = [
+      //   { name: { $regex: keyword, $options: "i" } },
+      //   { desc: { $regex: keyword, $options: "i" } }
+      // ];
+    }
+
+    // ✅ lọc theo category
+    if (categoryId) {
+      filter.category = categoryId;
+    }
       const products = await product.find()
         .populate('category', 'name')
         .populate('author', 'name')
