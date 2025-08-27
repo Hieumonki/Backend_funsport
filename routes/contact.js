@@ -17,14 +17,14 @@ router.post('/', async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'hieumonki4@gmail.com',         // 👉 Gmail bạn muốn gửi đi
+        user: 'hunghsps40750@gmail.com',         // 👉 Gmail bạn muốn gửi đi
         pass: 'qcbdfkdfbxrurfmw'                 // 👉 App Password (Không dùng password Gmail thường)
       }
     });
 
     const mailOptions = {
       from: email,
-      to: 'hieumonki4@gmail.com',           // 👉 Gmail nhận phản hồi
+      to: 'hunghsps40750@gmail.com',           // 👉 Gmail nhận phản hồi
       subject: `Liên hệ từ: ${name}`,
       text: `Số điện thoại: ${phone}\nEmail: ${email}\nNội dung:${message}`
     };
