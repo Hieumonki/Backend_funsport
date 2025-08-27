@@ -3,8 +3,7 @@ const middlewareCon = require("../controllers/middlewareCon");
 const { userCon, uploadAvatar } = require("../controllers/userCon");
 
 
-
-router.put('/me', varifyToken, uploadAvatar.single('avatar'), userCon.updateMe);
+router.put('/me', middlewareCon.varifyToken, uploadAvatar.single('avatar'), userCon.updateMe);
 // 📌 Lấy thông tin user đang đăng nhập
 router.get("/me", middlewareCon.varifyToken, userCon.getMe);
 
