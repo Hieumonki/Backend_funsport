@@ -83,11 +83,13 @@ app.post("/uploads", upload.single("image"), (req, res) => {
   res.status(200).json({ imageUrl });
 });
 
-
 // Xem ảnh
 app.get("/view-image/:filename", (req, res) => {
   const { filename } = req.params;
   res.sendFile(path.join(__dirname, "uploads", filename));
+});
+app.get("/ping", (req, res) => {
+  res.status(200).send("OK");
 });
 
 /* ===================== MoMo Test Payment ===================== */
@@ -175,6 +177,7 @@ app.post("/v1/orders/momo-ipn", (req, res) => {
 });
 /* ============================================================= */
 
-app.listen(8000, () => {
-  console.log("Server đang chạy tại http://localhost:8000");
+const PORT = process.env.PORT || 8000;
+app.listen(PORT, () => {
+  console.log(`Server đang chạy tại http://localhost:${PORT}`);
 });
