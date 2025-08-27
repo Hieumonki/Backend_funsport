@@ -59,9 +59,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Public folder uploads
-app.use("/uploads", express.static("uploads"));
-
 // Routes
 app.use("/v1/author", authorRouter);
 app.use("/v1/theme", themeRouter);
@@ -82,9 +79,10 @@ app.post("/uploads", upload.single("image"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "Vui lòng tải lên một tệp ảnh." });
   }
-  const imagePath = req.file.filename;
-  res.status(200).json({ imagePath });
+  const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+  res.status(200).json({ imageUrl });
 });
+
 
 // Xem ảnh
 app.get("/view-image/:filename", (req, res) => {
