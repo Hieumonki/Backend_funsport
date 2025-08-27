@@ -1,22 +1,5 @@
 const { account, theme } = require("../model/model");
 const bcrypt = require("bcryptjs");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-
-// --- Multer config upload avatar ---
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = './uploads/users';
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${req.user.id}-${Date.now()}${ext}`);
-  }
-});
-const uploadAvatar = multer({ storage });
 
 const userCon = {
   // 📌 Lấy toàn bộ user
@@ -72,10 +55,12 @@ const userCon = {
   deleteUsers: async (req, res) => {
     try {
       const { userIds } = req.body;
-      await Promise.all(userIds.map(async (id) => {
-        await theme.deleteMany({ author: id });
-        await account.findByIdAndDelete(id);
-      }));
+      await Promise.all(
+        userIds.map(async (id) => {
+          await theme.deleteMany({ author: id });
+          await account.findByIdAndDelete(id);
+        })
+      );
       res.status(200).json("Xoá nhiều người dùng thành công");
     } catch (error) {
       res.status(500).json({ message: "Lỗi khi xoá nhiều người dùng", error });
@@ -88,15 +73,15 @@ const userCon = {
       const users = await account.find();
       const stats = {
         totalUsers: users.length,
-        activeUsers: users.filter(u => u?.status === "active").length,
-        lockedUsers: users.filter(u => u?.status === "locked").length,
-        pendingUsers: users.filter(u => u?.status === "pending").length,
+        activeUsers: users.filter((u) => u?.status === "active").length,
+        lockedUsers: users.filter((u) => u?.status === "locked").length,
+        pendingUsers: users.filter((u) => u?.status === "pending").length,
         totalViolations: users.reduce((acc, user) => {
           const spam = user?.spamCount ?? 0;
           const cancel = user?.cancellationCount ?? 0;
           const ghost = user?.ghostingCount ?? 0;
           return acc + spam + cancel + ghost;
-        }, 0)
+        }, 0),
       };
       res.status(200).json(stats);
     } catch (error) {
@@ -133,7 +118,7 @@ const userCon = {
 
       const hasProduct = user.products.includes(productId);
       if (hasProduct) {
-        user.products = user.products.filter(p => p.toString() !== productId);
+        user.products = user.products.filter((p) => p.toString() !== productId);
       } else {
         user.products.push(productId);
       }
@@ -156,32 +141,32 @@ const userCon = {
     }
   },
 
- updateMe: async (req, res) => {
-  try {
-    const user = await account.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+  // 📌 Cập nhật thông tin cá nhân user đang đăng nhập
+  updateMe: async (req, res) => {
+    try {
+      const user = await account.findById(req.user.id);
+      if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
 
-    const updatableFields = ['fullName', 'email', 'phone', 'address'];
+      const updatableFields = ["fullName", "email", "phone", "address"];
 
-    for (const field of updatableFields) {
-      if (req.body[field] !== undefined) {
-        user[field] = req.body[field];
+      for (const field of updatableFields) {
+        if (req.body[field] !== undefined) {
+          user[field] = req.body[field];
+        }
       }
+
+      // Xử lý avatar (được middleware uploadAvatar đẩy vào req.file)
+      if (req.file) {
+        user.avatar = `/uploads/users/${req.file.filename}`;
+      }
+
+      await user.save();
+      res.status(200).json(user);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Lỗi khi cập nhật", error });
     }
-
-    // Xử lý avatar
-    if (req.file) {
-      user.avatar = `/uploads/users/${req.file.filename}`;
-    }
-
-    await user.save();
-    res.status(200).json(user);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Lỗi khi cập nhật", error });
-  }
-},
-
+  },
 
   // 📌 Đổi mật khẩu
   changePassword: async (req, res) => {
@@ -238,4 +223,4 @@ const userCon = {
   },
 };
 
-module.exports = { userCon, uploadAvatar };
+module.exports = userCon;
