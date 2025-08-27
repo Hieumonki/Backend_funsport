@@ -7,7 +7,7 @@ const fs = require("fs");
 // --- Multer config upload avatar ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = './uploads/avatars';
+    const dir = './uploads/users';
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
