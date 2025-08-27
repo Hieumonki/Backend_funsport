@@ -2,16 +2,11 @@ const router = require("express").Router();
 const middlewareCon = require("../controllers/middlewareCon");
 const { userCon, uploadAvatar } = require("../controllers/userCon");
 
+
+
+router.put('/me', varifyToken, uploadAvatar.single('avatar'), userCon.updateMe);
 // 📌 Lấy thông tin user đang đăng nhập
 router.get("/me", middlewareCon.varifyToken, userCon.getMe);
-
-// 📌 Cập nhật thông tin cá nhân user đang đăng nhập (có upload avatar)
-router.put(
-  "/me",
-  middlewareCon.varifyToken,
-  uploadAvatar.single("avatar"), // <--- field name 'avatar'
-  userCon.updateMe
-);
 
 // 📌 Đổi mật khẩu user đang đăng nhập
 router.put("/me/password", middlewareCon.varifyToken, userCon.changePassword);

@@ -156,31 +156,31 @@ const userCon = {
     }
   },
 
-  updateMe: async (req, res) => {
-    try {
-      const user = await account.findById(req.user.id);
-      if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+ updateMe: async (req, res) => {
+  try {
+    const user = await account.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
 
-      // Cập nhật từng field nếu có
-      if (req.body.fullName) user.fullName = req.body.fullName;
-      if (req.body.email) user.email = req.body.email;
+    const updatableFields = ['fullName', 'email', 'phone', 'address'];
 
-      // Thêm hoặc sửa phone & address
-      if (req.body.phone) user.phone = req.body.phone;
-      if (req.body.address) user.address = req.body.address;
-
-      // Avatar
-      if (req.file) user.avatar = `/uploads/users/${req.file.filename}`;
-
-      await user.save();
-      res.status(200).json(user); // trả thẳng user
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Lỗi khi cập nhật", error });
+    for (const field of updatableFields) {
+      if (req.body[field] !== undefined) {
+        user[field] = req.body[field];
+      }
     }
-  },
 
+    // Xử lý avatar
+    if (req.file) {
+      user.avatar = `/uploads/users/${req.file.filename}`;
+    }
 
+    await user.save();
+    res.status(200).json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi khi cập nhật", error });
+  }
+},
 
 
   // 📌 Đổi mật khẩu
