@@ -1,10 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const cartController = require("../controllers/cart");
-const auth = require("../controllers/middlewareCon"); // middleware check user
 
-router.get("/", auth, cartController.getCart);
-router.post("/add", auth, cartController.addToCart);
-router.post("/remove", auth, cartController.removeFromCart);
+// Lấy giỏ hàng
+router.get("/", cartController.getCart);
+
+// Thêm sản phẩm vào giỏ
+router.post("/", cartController.addToCart);
+
+// Xóa sản phẩm khỏi giỏ
+router.delete("/:id", cartController.removeFromCart);
 
 module.exports = router;
