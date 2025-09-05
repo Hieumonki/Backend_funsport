@@ -1,5 +1,5 @@
 const Cart = require("../model/cart");
-const Product = require("../model/model"); // nếu product model tên khác thì import đúng
+const Product = require("../model/model"); // đổi đúng tên file Product model nhé
 
 // ➕ Thêm sản phẩm vào giỏ
 const addToCart = async (req, res) => {
@@ -20,7 +20,6 @@ const addToCart = async (req, res) => {
       cart = new Cart({ userId, items: [], total: 0 });
     }
 
-    // 🔎 Kiểm tra sản phẩm đã có trong giỏ chưa
     const existing = cart.items.find(
       (item) =>
         item.productId.toString() === productId &&
@@ -34,14 +33,10 @@ const addToCart = async (req, res) => {
       cart.items.push({ productId, size, color, quantity: quantity || 1 });
     }
 
-    // Tính lại tổng tiền
     cart.total = await calculateCartTotal(cart.items);
-
     await cart.save();
 
-    // Populate để trả về chi tiết product
     const populated = await Cart.findById(cart._id).populate("items.productId");
-
     res.status(201).json(populated);
   } catch (err) {
     console.error("❌ Lỗi addToCart:", err);
@@ -92,7 +87,6 @@ const removeFromCart = async (req, res) => {
     await cart.save();
 
     const populated = await Cart.findById(cart._id).populate("items.productId");
-
     res.json(populated);
   } catch (err) {
     console.error("❌ Lỗi removeFromCart:", err);

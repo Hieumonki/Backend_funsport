@@ -1,14 +1,10 @@
 const router = require("express").Router();
-const cartController = require("../controllers/cart");
-const auth = require("../controllers/middlewareCon");
+const { addToCart, getCart, removeFromCart } = require("../controllers/cart");
+const auth = require("../controllers/middlewareCon"); // middleware xác thực token
 
-// ➕ Thêm vào giỏ
-router.post("/add", auth, cartController.addToCart);
-
-// 📦 Lấy giỏ hàng user
-router.get("/", auth, cartController.getCart);
-
-// ❌ Xoá 1 item trong giỏ
-router.delete("/remove", auth, cartController.removeFromCart);
+// các route cần login
+router.post("/add", auth, addToCart);
+router.get("/", auth, getCart);
+router.post("/remove", auth, removeFromCart);
 
 module.exports = router;
