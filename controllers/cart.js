@@ -70,26 +70,23 @@ const getCart = async (req, res) => {
 };
 
 
-// ❌ Xoá sản phẩm khỏi giỏ (xoá tất cả biến thể theo productId)
+// ❌ Xoá 1 sản phẩm (toàn bộ biến thể theo productId)
 const removeFromCart = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
-      return res
-        .status(401)
-        .json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
+      return res.status(401).json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
     }
 
     const userId = req.user.id;
-    const { productId } = req.body;  // chỉ cần productId
+    const { productId } = req.body;
 
     let cart = await Cart.findOne({ userId });
-    if (!cart)
+    if (!cart) {
       return res.status(404).json({ message: "Không tìm thấy giỏ hàng" });
+    }
 
-    // Xoá hết mọi item có cùng productId (bỏ size, color)
-    cart.items = cart.items.filter(
-      (item) => item.productId.toString() !== productId
-    );
+    // Giữ lại các item KHÁC productId
+    cart.items = cart.items.filter(item => item.productId.toString() !== productId);
 
     cart.total = await calculateCartTotal(cart.items);
     await cart.save();
@@ -98,9 +95,7 @@ const removeFromCart = async (req, res) => {
     res.json(populated);
   } catch (err) {
     console.error("❌ Lỗi removeFromCart:", err);
-    res
-      .status(500)
-      .json({ message: "Lỗi server khi xoá sản phẩm", error: err.message });
+    res.status(500).json({ message: "Lỗi server khi xoá sản phẩm", error: err.message });
   }
 };
 
