@@ -69,7 +69,8 @@ const getCart = async (req, res) => {
   }
 };
 
-// ❌ Xoá 1 sản phẩm khỏi giỏ
+
+// ❌ Xoá sản phẩm khỏi giỏ (xoá tất cả biến thể theo productId)
 const removeFromCart = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
@@ -79,19 +80,15 @@ const removeFromCart = async (req, res) => {
     }
 
     const userId = req.user.id;
-    const { productId, size, color } = req.body;
+    const { productId } = req.body;  // chỉ cần productId
 
     let cart = await Cart.findOne({ userId });
     if (!cart)
       return res.status(404).json({ message: "Không tìm thấy giỏ hàng" });
 
+    // Xoá hết mọi item có cùng productId (bỏ size, color)
     cart.items = cart.items.filter(
-      (item) =>
-        !(
-          item.productId.toString() === productId &&
-          item.size === size &&
-          item.color === color
-        )
+      (item) => item.productId.toString() !== productId
     );
 
     cart.total = await calculateCartTotal(cart.items);
