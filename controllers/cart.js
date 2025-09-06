@@ -70,7 +70,7 @@ const getCart = async (req, res) => {
 };
 
 
-// ❌ Xoá 1 sản phẩm (toàn bộ biến thể theo productId)
+// ❌ Xoá đúng 1 sản phẩm (theo productId + size + color)
 const removeFromCart = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
@@ -78,15 +78,21 @@ const removeFromCart = async (req, res) => {
     }
 
     const userId = req.user.id;
-    const { productId } = req.body;
+    const { productId, size, color } = req.body;  // ✅ cần cả 3
 
     let cart = await Cart.findOne({ userId });
     if (!cart) {
       return res.status(404).json({ message: "Không tìm thấy giỏ hàng" });
     }
 
-    // Giữ lại các item KHÁC productId
-    cart.items = cart.items.filter(item => item.productId.toString() !== productId);
+    // ✅ Chỉ xoá đúng 1 biến thể theo productId + size + color
+    cart.items = cart.items.filter(item =>
+      !(
+        item.productId.toString() === productId &&
+        item.size === size &&
+        item.color === color
+      )
+    );
 
     cart.total = await calculateCartTotal(cart.items);
     await cart.save();
@@ -98,6 +104,7 @@ const removeFromCart = async (req, res) => {
     res.status(500).json({ message: "Lỗi server khi xoá sản phẩm", error: err.message });
   }
 };
+
 
 // 🧮 Hàm tính tổng giỏ
 const calculateCartTotal = async (items) => {
