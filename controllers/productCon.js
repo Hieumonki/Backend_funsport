@@ -179,19 +179,12 @@ const productCon = {
     }
   },
 
-  // Get all products
- // Get all products with search & filter
+// Get all products with search & filter (không phân trang ở backend)
 getAllproduct: async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    // ✅ lấy query param ra trước
     const { keyword, category: categoryId } = req.query;
     let filter = {};
 
-    // ✅ lọc theo keyword (tên hoặc mô tả)
     if (keyword) {
       filter.$or = [
         { name: { $regex: keyword, $options: "i" } },
@@ -199,7 +192,6 @@ getAllproduct: async (req, res) => {
       ];
     }
 
-    // ✅ lọc theo category
     if (categoryId) {
       filter.category = categoryId;
     }
@@ -207,17 +199,11 @@ getAllproduct: async (req, res) => {
     const products = await product.find(filter)
       .populate("category", "name")
       .populate("author", "name")
-      .skip(skip)
-      .limit(limit)
       .sort({ createdAt: -1 });
-
-    const total = await product.countDocuments(filter);
 
     res.status(200).json({
       products,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
+      total: products.length
     });
   } catch (error) {
     console.error("Error getting all products:", error);
