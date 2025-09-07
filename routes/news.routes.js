@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { news } = require("../model/news");
+const { news } = require("../model/new");
 
 // Middleware for logging
 const logRequest = (req, res, next) => {
