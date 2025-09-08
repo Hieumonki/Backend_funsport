@@ -11,8 +11,14 @@ const addToCart = async (req, res) => {
     const userId = req.user.id;
     const { productId, size, color, quantity } = req.body;
 
-    if (!productId) {
-      return res.status(400).json({ message: "productId không được để trống" });
+    if (!productId || !size || !color) {
+      return res.status(400).json({ message: "Thiếu productId / size / color" });
+    }
+
+    // Validate số lượng
+    const qty = Number(quantity) || 1;
+    if (qty <= 0) {
+      return res.status(400).json({ message: "Số lượng không hợp lệ" });
     }
 
     let cart = await Cart.findOne({ userId });
@@ -26,7 +32,7 @@ const addToCart = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
     const variant = productData.variants.find(
-      v => v.size === size && v.color === color
+      (v) => v.size === size && v.color === color
     );
     if (!variant) {
       return res.status(400).json({ message: "Biến thể không tồn tại" });
@@ -40,14 +46,17 @@ const addToCart = async (req, res) => {
     );
 
     if (existing) {
-      existing.quantity += quantity || 1;
+      existing.quantity += qty;
+      if (existing.quantity <= 0) {
+        // Nếu số lượng về 0 thì xoá luôn
+        cart.items = cart.items.filter((i) => i !== existing);
+      }
     } else {
       cart.items.push({
         productId,
         size,
         color,
-        quantity: quantity || 1,
-        price: variant.price,   // ✅ Lưu luôn giá để FE dễ render
+        quantity: qty,
       });
     }
 
@@ -66,23 +75,22 @@ const addToCart = async (req, res) => {
 const getCart = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
-      return res
-        .status(401)
-        .json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
+      return res.status(401).json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
     }
 
     const userId = req.user.id;
     const cart = await Cart.findOne({ userId }).populate("items.productId");
 
-    res.json(cart || { items: [], total: 0 });
+    if (!cart) {
+      return res.json({ items: [], total: 0 });
+    }
+
+    res.json(cart);
   } catch (err) {
     console.error("❌ Lỗi getCart:", err);
-    res
-      .status(500)
-      .json({ message: "Lỗi server khi lấy giỏ hàng", error: err.message });
+    res.status(500).json({ message: "Lỗi server khi lấy giỏ hàng", error: err.message });
   }
 };
-
 
 // ❌ Xoá đúng 1 sản phẩm (theo productId + size + color)
 const removeFromCart = async (req, res) => {
@@ -92,33 +100,32 @@ const removeFromCart = async (req, res) => {
     }
 
     const userId = req.user.id;
-    const { productId, size, color } = req.body;  // ✅ cần cả 3
+    const { productId, size, color } = req.body;
 
     let cart = await Cart.findOne({ userId });
     if (!cart) {
       return res.status(404).json({ message: "Không tìm thấy giỏ hàng" });
     }
 
-    // ✅ Chỉ xoá đúng 1 biến thể theo productId + size + color
-    cart.items = cart.items.filter(item =>
-      !(
-        item.productId.toString() === productId &&
-        item.size === size &&
-        item.color === color
-      )
+    cart.items = cart.items.filter(
+      (item) =>
+        !(
+          item.productId.toString() === productId &&
+          item.size === size &&
+          item.color === color
+        )
     );
 
     cart.total = await calculateCartTotal(cart.items);
     await cart.save();
 
     const populated = await Cart.findById(cart._id).populate("items.productId");
-    res.json(populated);
+    res.json(populated || { items: [], total: 0 });
   } catch (err) {
     console.error("❌ Lỗi removeFromCart:", err);
     res.status(500).json({ message: "Lỗi server khi xoá sản phẩm", error: err.message });
   }
 };
-
 
 const calculateCartTotal = async (items) => {
   let total = 0;
@@ -126,7 +133,7 @@ const calculateCartTotal = async (items) => {
     const productData = await Product.findById(item.productId);
     if (productData) {
       const variant = productData.variants.find(
-        v => v.size === item.size && v.color === item.color
+        (v) => v.size === item.size && v.color === item.color
       );
       if (variant) {
         total += variant.price * item.quantity;
@@ -135,6 +142,5 @@ const calculateCartTotal = async (items) => {
   }
   return total;
 };
-
 
 module.exports = { addToCart, getCart, removeFromCart };

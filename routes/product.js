@@ -20,11 +20,15 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+
 // 📊 API thống kê
 router.get("/stats", productCon.getProductStats);
 
 // 🔀 Lấy sản phẩm ngẫu nhiên
 router.get("/random/products", productCon.getRandomProducts);
+
+// 🔎 Query nâng cao (⚡ thêm để khớp với FE ProductService.getProductByQuery)
+router.get("/query", productCon.getAllproduct);
 
 // 👤 Lấy sản phẩm theo user (đặt TRƯỚC /:id)
 router.get("/user/:userId", productCon.getProductsByUser);

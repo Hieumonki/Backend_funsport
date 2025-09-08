@@ -1,4 +1,4 @@
-const { product, category, author } = require("../model/model"); 
+const { product, category, author } = require("../model/model");
 const mongoose = require("mongoose");
 
 const productCon = {
@@ -31,10 +31,17 @@ const productCon = {
   // Get random products
   getRandomProducts: async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit) || 10;
+      const limit = parseInt(req.query.limit, 10) || 10; // ✅ thêm radix cho chắc chắn
       const randomProducts = await product.aggregate([
         { $sample: { size: limit } },
-        { $lookup: { from: "categories", localField: "category", foreignField: "_id", as: "category" } },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "category",
+            foreignField: "_id",
+            as: "category"
+          }
+        },
         { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } }
       ]);
       res.status(200).json(randomProducts);
@@ -46,7 +53,6 @@ const productCon = {
   // Add product
   addproduct: async (req, res) => {
     try {
-      // Parse variants (nếu frontend gửi form-data)
       let variants = req.body.variants;
       if (typeof variants === "string") {
         try {
@@ -57,16 +63,16 @@ const productCon = {
       }
 
       const {
-        name, 
-        desc, 
-        category: categoryId, 
-        minStock, 
-        tab, 
-        describe, 
-        author: authorId 
+        name,
+        desc,
+        category: categoryId,
+        minStock,
+        tab,
+        describe,
+        author: authorId
       } = req.body;
 
-      if (!name || !categoryId || !variants || !Array.isArray(variants) || variants.length === 0) {
+      if (!name || !categoryId || !Array.isArray(variants) || variants.length === 0) {
         return res.status(400).json({ message: "Name, category, and at least one variant are required" });
       }
 
@@ -103,14 +109,15 @@ const productCon = {
 
       const savedProduct = await newProduct.save();
 
-      // Gắn product vào author
       if (authorId && mongoose.Types.ObjectId.isValid(authorId)) {
         await author.findByIdAndUpdate(authorId, {
           $push: { product: savedProduct._id }
         });
       }
 
-      const populatedProduct = await product.findById(savedProduct._id).populate("category", "name");
+      const populatedProduct = await product.findById(savedProduct._id)
+        .populate("category", "name")
+        .populate("author", "name"); // ✅ đồng bộ với FE
       res.status(201).json(populatedProduct);
     } catch (error) {
       res.status(500).json({ message: "Server error", error: error.message });
@@ -148,7 +155,6 @@ const productCon = {
   // Get a single product
   getAnproduct: async (req, res) => {
     try {
-      console.log("👉 Find product with ID:", req.params.id); 
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         return res.status(400).json({ message: "Invalid product ID" });
       }
@@ -156,10 +162,8 @@ const productCon = {
         .populate("category", "name")
         .populate("author", "name email");
       if (!foundProduct) {
-        console.log("❌ Not found in DB");
         return res.status(404).json({ message: "Product not found" });
       }
-      console.log("✅ Found product:", foundProduct);
       res.status(200).json(foundProduct);
     } catch (error) {
       res.status(500).json({ message: "Server error", error: error.message });
@@ -184,13 +188,11 @@ const productCon = {
 
       const { minStock, ...otherFields } = req.body;
 
-      // Xử lý ảnh mới nếu có
-      let images = undefined;
+      let images;
       if (req.files && req.files.length > 0) {
         images = req.files.map(file => file.filename);
       }
 
-      // Tính status
       let status;
       if (variants && Array.isArray(variants)) {
         const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
@@ -199,8 +201,8 @@ const productCon = {
         else status = "instock";
       }
 
-      const updateData = { 
-        ...otherFields, 
+      const updateData = {
+        ...otherFields,
         ...(variants && { variants }),
         ...(minStock && { minStock }),
         ...(status && { status }),
@@ -211,7 +213,9 @@ const productCon = {
         req.params.id,
         updateData,
         { new: true, runValidators: true }
-      ).populate("category", "name");
+      )
+        .populate("category", "name")
+        .populate("author", "name"); // ✅ cho đồng bộ
 
       if (!updatedProduct) {
         return res.status(404).json({ message: "Product not found" });
@@ -238,7 +242,10 @@ const productCon = {
           $pull: { product: deletedProduct._id }
         });
       }
-      res.status(200).json({ message: "Product deleted successfully", product: deletedProduct });
+      res.status(200).json({
+        message: "Product deleted successfully",
+        product: deletedProduct
+      });
     } catch (error) {
       res.status(500).json({ message: "Server error", error: error.message });
     }
@@ -251,8 +258,8 @@ const productCon = {
         return res.status(400).json({ message: "Invalid user ID" });
       }
 
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = parseInt(req.query.limit, 10) || 10;
       const skip = (page - 1) * limit;
 
       const products = await product.find({ author: req.params.userId })
