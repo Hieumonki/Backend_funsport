@@ -47,7 +47,7 @@ const addToCart = async (req, res) => {
 
     if (existing) {
       existing.quantity += qty;
-      existing.price = variant.price; // ✅ đảm bảo luôn có price
+      existing.price = Number(variant.price) || 0; // ✅ đảm bảo luôn có giá
       if (existing.quantity <= 0) {
         cart.items = cart.items.filter((i) => i !== existing);
       }
@@ -57,9 +57,10 @@ const addToCart = async (req, res) => {
         size,
         color,
         quantity: qty,
-        price: variant.price, // ✅ luôn set price
+        price: Number(variant.price) || 0, // ✅ fallback giá = 0 nếu thiếu
       });
     }
+
 
     cart.total = calculateCartTotal(cart.items);
     await cart.save();
@@ -133,5 +134,6 @@ const calculateCartTotal = (items) => {
     return sum + price * qty;
   }, 0);
 };
+
 
 module.exports = { addToCart, getCart, removeFromCart };
