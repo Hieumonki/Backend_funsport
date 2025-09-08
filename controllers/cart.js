@@ -7,7 +7,6 @@ const addToCart = async (req, res) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
     }
-console.log("👉 req.user =", req.user);
 
     const userId = req.user.id;
     const { productId, size, color, quantity } = req.body;
@@ -26,11 +25,12 @@ console.log("👉 req.user =", req.user);
       cart = new Cart({ userId, items: [], total: 0 });
     }
 
-    // Lấy sản phẩm & variant
+    // 🔍 Lấy sản phẩm & variant
     const productData = await Product.findById(productId);
     if (!productData) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
+
     const variant = productData.variants.find(
       (v) => v.size === size && v.color === color
     );
@@ -38,7 +38,12 @@ console.log("👉 req.user =", req.user);
       return res.status(400).json({ message: "Biến thể không tồn tại" });
     }
 
-    // Kiểm tra item tồn tại
+    // ✅ Validate giá
+    if (variant.price === undefined || variant.price === null) {
+      return res.status(400).json({ message: "Biến thể chưa có giá bán" });
+    }
+
+    // 🔄 Kiểm tra item tồn tại
     const existing = cart.items.find(
       (item) =>
         item.productId.toString() === productId &&
@@ -48,7 +53,7 @@ console.log("👉 req.user =", req.user);
 
     if (existing) {
       existing.quantity += qty;
-      existing.price = Number(variant.price) || 0; // ✅ đảm bảo luôn có giá
+      existing.price = Number(variant.price); // luôn có giá hợp lệ
       if (existing.quantity <= 0) {
         cart.items = cart.items.filter((i) => i !== existing);
       }
@@ -58,10 +63,9 @@ console.log("👉 req.user =", req.user);
         size,
         color,
         quantity: qty,
-        price: Number(variant.price) || 0, // ✅ fallback giá = 0 nếu thiếu
+        price: Number(variant.price) // luôn đảm bảo có giá
       });
     }
-
 
     cart.total = calculateCartTotal(cart.items);
     await cart.save();
@@ -135,6 +139,5 @@ const calculateCartTotal = (items) => {
     return sum + price * qty;
   }, 0);
 };
-
 
 module.exports = { addToCart, getCart, removeFromCart };
