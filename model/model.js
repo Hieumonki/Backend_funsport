@@ -1,165 +1,187 @@
 const mongoose = require("mongoose");
 const mongoosePaginate = require("mongoose-paginate-v2");
 
-const productSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
+/* ===== Variant Schema (color + size + price + stock) ===== */
+const variantSchema = new mongoose.Schema({
+  color: { type: String, required: true },
+  size: { type: String, required: true },
+  price: { type: Number, required: true, min: 0 },
+  stock: { type: Number, default: 0 },
+});
+
+/* ===== Product Schema ===== */
+const productSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    desc: String,
+    category: { type: mongoose.Schema.Types.ObjectId, ref: "category" },
+    image: [String],
+    variants: [variantSchema], // 🔥 thay cho price, quantity, color
+    minStock: {
+      type: Number,
+      default: 5,
+    },
+    tab: String,
+    describe: String,
+    status: {
+      type: String,
+      enum: ["instock", "lowstock", "outofstock"],
+      default: "instock",
+    },
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "author",
+    },
   },
-  desc: String,
-  category: { type: mongoose.Schema.Types.ObjectId, ref: "category" },
-  image: [String],
-  price: Number,
-  quantity: Number,
-  minStock: Number,
-  color: {
-    type: String,
-    default: '#000000',
-    validate: {
-      validator: function(v) {
-        return !v || /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(v);
-      },
-      message: 'Color must be a valid hex color (e.g., #FF0000)'
-    }
-  },
-  tab: String,
-  describe: String,
-  status: {
-    type: String,
-    enum: ["instock", "lowstock", "outofstock"],
-    default: "instock",
-  },
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "author",
-  },
-}, { timestamps: true });
+  { timestamps: true }
+);
 productSchema.plugin(mongoosePaginate);
 
-const categorySchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    minlength: 6,
-    unique: true,
+/* ===== Category Schema ===== */
+const categorySchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      minlength: 6,
+      unique: true,
+    },
+    image: String,
   },
-  image: String,
-}, { timestamps: true });
+  { timestamps: true }
+);
 categorySchema.plugin(mongoosePaginate);
 
-const themeSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    default: 'no name',
-    trim: true,
-    minlength: 1,
+/* ===== Theme Schema ===== */
+const themeSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      default: "no name",
+      trim: true,
+      minlength: 1,
+    },
+    desc: String,
+    linkimage: String,
+    linkproduct: String,
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "author",
+    },
   },
-  desc: String,
-  linkimage: String,
-  linkproduct: String,
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "author",
-  },
-}, { timestamps: true });
+  { timestamps: true }
+);
 themeSchema.plugin(mongoosePaginate);
 
-const authorSchema = new mongoose.Schema({
-  id: String,
-  name: String,
-  email: String,
-  image: String,
-  desc: String,
-  link: String,
-  background: String,
-  createUser: String,
-  theme: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "theme",
-    },
-  ],
-}, { timestamps: true });
+/* ===== Author Schema ===== */
+const authorSchema = new mongoose.Schema(
+  {
+    id: String,
+    name: String,
+    email: String,
+    image: String,
+    desc: String,
+    link: String,
+    background: String,
+    createUser: String,
+    theme: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "theme",
+      },
+    ],
+  },
+  { timestamps: true }
+);
 authorSchema.plugin(mongoosePaginate);
 
-const accountSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    minlength: 6,
-    unique: true,
-  },
-  image: {
-    type: String,
-    default: 'no name',
-  },
-  fullName: {
-    type: String,
-    minlength: 6,
-    unique: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    minlength: 6,
-    unique: true,
-  },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6,
-  },
+/* ===== Account Schema ===== */
+const accountSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      minlength: 6,
+      unique: true,
+    },
+    image: {
+      type: String,
+      default: "no name",
+    },
+    fullName: {
+      type: String,
+      minlength: 6,
+      unique: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      minlength: 6,
+      unique: true,
+    },
+    password: {
+      type: String,
+      required: true,
+      minlength: 6,
+    },
     phone: {
-    type: String,
-    match: [/^[0-9]{9,12}$/, "Số điện thoại không hợp lệ"], // 9-12 số
+      type: String,
+      match: [/^[0-9]{9,12}$/, "Số điện thoại không hợp lệ"], // 9-12 số
+    },
+    address: {
+      type: String,
+      maxlength: 255,
+      trim: true,
+    },
+    avatar: { type: String, default: "" },
+    admin: {
+      type: Boolean,
+      default: false,
+    },
+    products: [{ type: mongoose.Schema.Types.ObjectId, ref: "product" }],
+    status: {
+      type: String,
+      enum: ["active", "locked", "pending"],
+      default: "pending",
+    },
+    spamCount: {
+      type: Number,
+      default: 0,
+    },
+    cancellationCount: {
+      type: Number,
+      default: 0,
+    },
+    ghostingCount: {
+      type: Number,
+      default: 0,
+    },
   },
-  address: {
-    type: String,
-    maxlength: 255,
-    trim: true,
-  },
-  avatar: { type: String, default: "" },
-  admin: {
-    type: Boolean,
-    default: false,
-  },
-  products: [{ type: mongoose.Schema.Types.ObjectId, ref: "product" }],
-  status: {
-    type: String,
-    enum: ["active", "locked", "pending"],
-    default: "pending",
-  },
-  spamCount: {
-    type: Number,
-    default: 0,
-  },
-  cancellationCount: {
-    type: Number,
-    default: 0,
-  },
-  ghostingCount: {
-    type: Number,
-    default: 0,
-  }
-}, { timestamps: true });
+  { timestamps: true }
+);
 accountSchema.plugin(mongoosePaginate);
 
+/* ===== News Schema ===== */
 const newsSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
-    minlength: 6
+    minlength: 6,
   },
   description: String,
   image: String,
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 newsSchema.plugin(mongoosePaginate);
 
+/* ===== Stats Schema ===== */
 const statsSchema = new mongoose.Schema({
   totalRevenue: {
     type: String,
@@ -188,6 +210,7 @@ const statsSchema = new mongoose.Schema({
 });
 statsSchema.plugin(mongoosePaginate);
 
+/* ===== ProductSell Schema ===== */
 const productSellSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -198,11 +221,11 @@ const productSellSchema = new mongoose.Schema({
   price: {
     type: Number,
     required: true,
-    min: 0
+    min: 0,
   },
   priceold: {
     type: Number,
-    min: 0
+    min: 0,
   },
   category: String,
   createdAt: {
@@ -212,16 +235,17 @@ const productSellSchema = new mongoose.Schema({
 });
 productSellSchema.plugin(mongoosePaginate);
 
+/* ===== BestSeller Schema ===== */
 const bestSellerSchema = new mongoose.Schema({
   name: String,
   image: String,
   price: {
     type: Number,
-    min: 0
+    min: 0,
   },
   priceold: {
     type: Number,
-    min: 0
+    min: 0,
   },
   category: String,
   tab: String,
@@ -232,6 +256,7 @@ const bestSellerSchema = new mongoose.Schema({
 });
 bestSellerSchema.plugin(mongoosePaginate);
 
+/* ===== Export Models ===== */
 module.exports = {
   category: mongoose.model("category", categorySchema),
   product: mongoose.model("product", productSchema),

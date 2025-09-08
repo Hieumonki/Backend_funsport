@@ -1,4 +1,4 @@
-const { product, category, author } = require("../model/model"); // Import from your model.js file
+const { product, category, author } = require("../model/model"); 
 const mongoose = require("mongoose");
 
 const productCon = {
@@ -6,9 +6,18 @@ const productCon = {
   getProductStats: async (req, res) => {
     try {
       const totalProducts = await product.countDocuments();
-      const inStockProducts = await product.countDocuments({ status: "instock" });
-      const outOfStockProducts = await product.countDocuments({ status: "outofstock" });
-      const lowStockProducts = await product.countDocuments({ status: "lowstock" });
+
+      // Tính toán theo variants
+      const products = await product.find({}, "variants minStock");
+
+      let inStockProducts = 0, outOfStockProducts = 0, lowStockProducts = 0;
+
+      products.forEach(p => {
+        const totalStock = p.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+        if (totalStock === 0) outOfStockProducts++;
+        else if (totalStock <= (p.minStock || 5)) lowStockProducts++;
+        else inStockProducts++;
+      });
 
       res.status(200).json({
         total: totalProducts,
@@ -39,7 +48,7 @@ const productCon = {
     }
   },
 
-  // Add product (your existing code)
+  // Add product
   addproduct: async (req, res) => {
     try {
       console.log("Request body:", req.body);
@@ -49,20 +58,18 @@ const productCon = {
         desc, 
         category: categoryId, 
         image, 
-        price, 
-        quantity, 
+        variants, 
         minStock, 
-        color, 
         tab, 
         describe, 
         author: authorId 
       } = req.body;
 
       // Validate required fields
-      if (!name || !price || quantity === undefined || !categoryId) {
+      if (!name || !categoryId || !variants || !Array.isArray(variants) || variants.length === 0) {
         return res.status(400).json({ 
-          message: "Name, price, quantity, and category are required",
-          received: { name, price, quantity, categoryId }
+          message: "Name, category, and at least one variant are required",
+          received: { name, categoryId, variants }
         });
       }
 
@@ -72,45 +79,13 @@ const productCon = {
         return res.status(400).json({ message: "Invalid category ID" });
       }
 
-      // Process color field - handle different formats
-      let processedColor = '#000000'; // Default color
-      
-      if (color) {
-        try {
-          // If color is a JSON string, try to parse it
-          if (typeof color === 'string' && color.startsWith('[')) {
-            const parsedColor = JSON.parse(color);
-            processedColor = Array.isArray(parsedColor) ? parsedColor : color;
-          } else if (typeof color === 'string') {
-            // Validate hex color format
-            if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)) {
-              processedColor = color;
-            } else {
-              return res.status(400).json({ message: "Invalid color format. Use hex format like #FF0000" });
-            }
-          } else if (Array.isArray(color)) {
-            // Validate array of hex colors
-            const validColors = color.every(c => 
-              typeof c === 'string' && /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(c)
-            );
-            if (validColors) {
-              processedColor = color;
-            } else {
-              return res.status(400).json({ message: "All colors must be in hex format like #FF0000" });
-            }
-          }
-        } catch (parseError) {
-          console.warn("Color parsing error:", parseError);
-          processedColor = '#000000'; // Fallback to default
-        }
-      }
-
-      // Calculate status based on quantity
+      // Calculate status based on variants stock
       const calculatedMinStock = minStock || 5;
+      const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
       let status = "instock";
-      if (quantity === 0) {
+      if (totalStock === 0) {
         status = "outofstock";
-      } else if (quantity <= calculatedMinStock) {
+      } else if (totalStock <= calculatedMinStock) {
         status = "lowstock";
       }
 
@@ -118,15 +93,13 @@ const productCon = {
         name,
         desc,
         category: categoryId,
-        image: Array.isArray(image) ? image : [image || ''],
-        price: Number(price),
-        quantity: Number(quantity),
+        image: Array.isArray(image) ? image : [image || ""],
+        variants,
         minStock: calculatedMinStock,
-        color: processedColor,
         tab,
         describe,
         author: authorId,
-        status: status,
+        status
       });
 
       console.log("Product to save:", newProduct);
@@ -149,68 +122,46 @@ const productCon = {
       }
 
       // Populate category information before returning
-      const populatedProduct = await product.findById(savedProduct._id).populate('category', 'name');
+      const populatedProduct = await product.findById(savedProduct._id).populate("category", "name");
 
       res.status(201).json(populatedProduct);
     } catch (error) {
       console.error("Error adding product:", error);
-      
-      if (error.name === 'ValidationError') {
-        const validationErrors = Object.values(error.errors).map(err => err.message);
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: validationErrors,
-          details: error.errors
-        });
-      }
-
-      if (error.code === 11000) {
-        return res.status(400).json({ 
-          message: "Duplicate product name", 
-          field: Object.keys(error.keyPattern)[0] 
-        });
-      }
-
-      res.status(500).json({ 
-        message: "Server error", 
-        error: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
+      res.status(500).json({ message: "Server error", error: error.message });
     }
   },
 
-// Get all products with search & filter (không phân trang ở backend)
-getAllproduct: async (req, res) => {
-  try {
-    const { keyword, category: categoryId } = req.query;
-    let filter = {};
+  // Get all products with search & filter (no pagination backend)
+  getAllproduct: async (req, res) => {
+    try {
+      const { keyword, category: categoryId } = req.query;
+      let filter = {};
 
-    if (keyword) {
-      filter.$or = [
-        { name: { $regex: keyword, $options: "i" } },
-        { desc: { $regex: keyword, $options: "i" } }
-      ];
+      if (keyword) {
+        filter.$or = [
+          { name: { $regex: keyword, $options: "i" } },
+          { desc: { $regex: keyword, $options: "i" } }
+        ];
+      }
+
+      if (categoryId) {
+        filter.category = categoryId;
+      }
+
+      const products = await product.find(filter)
+        .populate("category", "name")
+        .populate("author", "name")
+        .sort({ createdAt: -1 });
+
+      res.status(200).json({
+        products,
+        total: products.length
+      });
+    } catch (error) {
+      console.error("Error getting all products:", error);
+      res.status(500).json({ message: "Server error", error: error.message });
     }
-
-    if (categoryId) {
-      filter.category = categoryId;
-    }
-
-    const products = await product.find(filter)
-      .populate("category", "name")
-      .populate("author", "name")
-      .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      products,
-      total: products.length
-    });
-  } catch (error) {
-    console.error("Error getting all products:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-},
-
+  },
 
   // Get a single product
   getAnproduct: async (req, res) => {
@@ -220,8 +171,8 @@ getAllproduct: async (req, res) => {
       }
 
       const foundProduct = await product.findById(req.params.id)
-        .populate('category', 'name')
-        .populate('author', 'name email');
+        .populate("category", "name")
+        .populate("author", "name email");
 
       if (!foundProduct) {
         return res.status(404).json({ message: "Product not found" });
@@ -234,68 +185,36 @@ getAllproduct: async (req, res) => {
     }
   },
 
-  // Update product (your existing code)
+  // Update product
   updateproduct: async (req, res) => {
     try {
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         return res.status(400).json({ message: "Invalid product ID" });
       }
 
-      const { quantity, minStock, color, ...otherFields } = req.body;
+      const { variants, minStock, ...otherFields } = req.body;
 
-      // Process color field for update
-      let processedColor;
-      if (color !== undefined) {
-        try {
-          if (typeof color === 'string' && color.startsWith('[')) {
-            const parsedColor = JSON.parse(color);
-            processedColor = Array.isArray(parsedColor) ? parsedColor : color;
-          } else if (typeof color === 'string') {
-            if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color)) {
-              processedColor = color;
-            } else {
-              return res.status(400).json({ message: "Invalid color format. Use hex format like #FF0000" });
-            }
-          } else if (Array.isArray(color)) {
-            const validColors = color.every(c => 
-              typeof c === 'string' && /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(c)
-            );
-            if (validColors) {
-              processedColor = color;
-            } else {
-              return res.status(400).json({ message: "All colors must be in hex format like #FF0000" });
-            }
-          }
-        } catch (parseError) {
-          console.warn("Color parsing error:", parseError);
-          return res.status(400).json({ message: "Invalid color data format" });
-        }
-      }
-
-      // Recalculate status if quantity is being updated
-      if (quantity !== undefined) {
-        const calculatedMinStock = minStock || 5;
-        let status = "instock";
-        if (quantity === 0) {
-          status = "outofstock";
-        } else if (quantity <= calculatedMinStock) {
-          status = "lowstock";
-        }
-        otherFields.status = status;
+      // Recalculate status if variants updated
+      let status;
+      if (variants && Array.isArray(variants)) {
+        const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+        if (totalStock === 0) status = "outofstock";
+        else if (totalStock <= (minStock || 5)) status = "lowstock";
+        else status = "instock";
       }
 
       const updateData = { 
         ...otherFields, 
-        quantity, 
-        minStock,
-        ...(processedColor !== undefined && { color: processedColor })
+        ...(variants && { variants }),
+        ...(minStock && { minStock }),
+        ...(status && { status })
       };
 
       const updatedProduct = await product.findByIdAndUpdate(
         req.params.id,
         updateData,
         { new: true, runValidators: true }
-      ).populate('category', 'name');
+      ).populate("category", "name");
 
       if (!updatedProduct) {
         return res.status(404).json({ message: "Product not found" });
@@ -303,17 +222,8 @@ getAllproduct: async (req, res) => {
 
       res.status(200).json(updatedProduct);
     } catch (error) {
-      console.error('Error updating product:', error);
-      
-      if (error.name === 'ValidationError') {
-        const validationErrors = Object.values(error.errors).map(err => err.message);
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: validationErrors 
-        });
-      }
-      
-      res.status(500).json({ message: 'Server error', error: error.message });
+      console.error("Error updating product:", error);
+      res.status(500).json({ message: "Server error", error: error.message });
     }
   },
 
@@ -361,8 +271,8 @@ getAllproduct: async (req, res) => {
       const skip = (page - 1) * limit;
 
       const products = await product.find({ author: req.params.userId })
-        .populate('category', 'name')
-        .populate('author', 'name email')
+        .populate("category", "name")
+        .populate("author", "name email")
         .skip(skip)
         .limit(limit)
         .sort({ createdAt: -1 });
