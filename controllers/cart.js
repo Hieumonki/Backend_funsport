@@ -57,7 +57,9 @@ const addToCart = async (req, res) => {
         size,
         color,
         quantity: qty,
+        price: variant.price, // ✅ thêm giá từ variant
       });
+
     }
 
     cart.total = await calculateCartTotal(cart.items);
@@ -127,20 +129,8 @@ const removeFromCart = async (req, res) => {
   }
 };
 
-const calculateCartTotal = async (items) => {
-  let total = 0;
-  for (const item of items) {
-    const productData = await Product.findById(item.productId);
-    if (productData) {
-      const variant = productData.variants.find(
-        (v) => v.size === item.size && v.color === item.color
-      );
-      if (variant) {
-        total += variant.price * item.quantity;
-      }
-    }
-  }
-  return total;
+const calculateCartTotal = (items) => {
+  return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 };
 
 module.exports = { addToCart, getCart, removeFromCart };
