@@ -5,5 +5,6 @@ const { varifyToken } = require("../controllers/middlewareCon"); // ✅ destruct
 router.post("/add", varifyToken, addToCart);
 router.get("/", varifyToken, getCart);
 router.post("/remove", varifyToken, removeFromCart);
+router.post("/decrease", varifyToken, decreaseFromCart);
 
 module.exports = router;

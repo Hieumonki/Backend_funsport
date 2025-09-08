@@ -132,6 +132,49 @@ const removeFromCart = async (req, res) => {
     res.status(500).json({ message: "Lỗi server khi xoá sản phẩm", error: err.message });
   }
 };
+const decreaseFromCart = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
+    }
+
+    const userId = req.user.id;
+    const { productId, size, color } = req.body;
+
+    let cart = await Cart.findOne({ userId }).populate("items.productId");
+    if (!cart) return res.status(404).json({ message: "Không tìm thấy giỏ hàng" });
+
+    const itemIndex = cart.items.findIndex(
+      (item) =>
+        item.productId._id.toString() === productId &&
+        item.size === size &&
+        item.color === color
+    );
+
+    if (itemIndex === -1) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm trong giỏ" });
+    }
+
+    // ✅ giảm số lượng
+    if (cart.items[itemIndex].quantity > 1) {
+      cart.items[itemIndex].quantity -= 1;
+    } else {
+      // nếu còn 1 thì xoá luôn
+      cart.items.splice(itemIndex, 1);
+    }
+
+    // ✅ tính lại total
+    cart.total = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+    await cart.save();
+
+    const populated = await Cart.findById(cart._id).populate("items.productId");
+    res.json(populated || { items: [], total: 0 });
+  } catch (err) {
+    console.error("❌ Lỗi decreaseFromCart:", err);
+    res.status(500).json({ message: "Lỗi server khi giảm số lượng", error: err.message });
+  }
+};
 
 // ✅ Hàm tính tổng an toàn
 const calculateCartTotal = (items) => {
