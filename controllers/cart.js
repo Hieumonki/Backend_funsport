@@ -185,4 +185,4 @@ const calculateCartTotal = (items) => {
   }, 0);
 };
 
-module.exports = { addToCart, getCart, removeFromCart };
+module.exports = { addToCart, getCart, removeFromCart,  decreaseFromCart    };
