@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const { addToCart, getCart, removeFromCart } = require("../controllers/cart");
+const { addToCart, getCart, removeFromCart,decreaseFromCart } = require("../controllers/cart");
 const { varifyToken } = require("../controllers/middlewareCon"); // ✅ destructure
 
 router.post("/add", varifyToken, addToCart);
