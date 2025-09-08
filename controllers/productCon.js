@@ -148,6 +148,7 @@ const productCon = {
   // Get a single product
   getAnproduct: async (req, res) => {
     try {
+      console.log("👉 Find product with ID:", req.params.id); 
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         return res.status(400).json({ message: "Invalid product ID" });
       }
@@ -155,8 +156,10 @@ const productCon = {
         .populate("category", "name")
         .populate("author", "name email");
       if (!foundProduct) {
+        console.log("❌ Not found in DB");
         return res.status(404).json({ message: "Product not found" });
       }
+      console.log("✅ Found product:", foundProduct);
       res.status(200).json(foundProduct);
     } catch (error) {
       res.status(500).json({ message: "Server error", error: error.message });
