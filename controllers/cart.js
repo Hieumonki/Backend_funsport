@@ -71,6 +71,8 @@ const addToCart = async (req, res) => {
     await cart.save();
 
     const populated = await Cart.findById(cart._id).populate("items.productId");
+    console.log("🛒 Cart sau khi thêm:", JSON.stringify(cart.items, null, 2));
+
     res.status(201).json(populated);
   } catch (err) {
     console.error("❌ Lỗi addToCart:", err);
