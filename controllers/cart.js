@@ -1,5 +1,5 @@
 const Cart = require("../model/cart");
-const { product: Product } = require("../model/model"); // lấy đúng model Product
+const { product: Product } = require("../model/model");
 
 // ➕ Thêm sản phẩm vào giỏ
 const addToCart = async (req, res) => {
@@ -20,11 +20,12 @@ const addToCart = async (req, res) => {
       cart = new Cart({ userId, items: [], total: 0 });
     }
 
-    // Lấy variant theo size + color
+    // 🔍 Lấy sản phẩm và variant
     const productData = await Product.findById(productId);
     if (!productData) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
+
     const variant = productData.variants.find(
       v => v.size === size && v.color === color
     );
@@ -32,6 +33,7 @@ const addToCart = async (req, res) => {
       return res.status(400).json({ message: "Biến thể không tồn tại" });
     }
 
+    // ✅ Kiểm tra xem sản phẩm đã có trong giỏ chưa
     const existing = cart.items.find(
       (item) =>
         item.productId.toString() === productId &&
@@ -47,11 +49,12 @@ const addToCart = async (req, res) => {
         size,
         color,
         quantity: quantity || 1,
-        price: variant.price,   // ✅ Lưu luôn giá để FE dễ render
+        price: variant.price, // ✅ Lưu giá tại thời điểm thêm vào giỏ
       });
     }
 
-    cart.total = await calculateCartTotal(cart.items);
+    // ✅ Tính tổng dựa trên price đã lưu trong cart
+    cart.total = calculateCartTotal(cart.items);
     await cart.save();
 
     const populated = await Cart.findById(cart._id).populate("items.productId");
@@ -66,9 +69,7 @@ const addToCart = async (req, res) => {
 const getCart = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
-      return res
-        .status(401)
-        .json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
+      return res.status(401).json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
     }
 
     const userId = req.user.id;
@@ -77,12 +78,9 @@ const getCart = async (req, res) => {
     res.json(cart || { items: [], total: 0 });
   } catch (err) {
     console.error("❌ Lỗi getCart:", err);
-    res
-      .status(500)
-      .json({ message: "Lỗi server khi lấy giỏ hàng", error: err.message });
+    res.status(500).json({ message: "Lỗi server khi lấy giỏ hàng", error: err.message });
   }
 };
-
 
 // ❌ Xoá đúng 1 sản phẩm (theo productId + size + color)
 const removeFromCart = async (req, res) => {
@@ -92,14 +90,14 @@ const removeFromCart = async (req, res) => {
     }
 
     const userId = req.user.id;
-    const { productId, size, color } = req.body;  // ✅ cần cả 3
+    const { productId, size, color } = req.body;
 
     let cart = await Cart.findOne({ userId });
     if (!cart) {
       return res.status(404).json({ message: "Không tìm thấy giỏ hàng" });
     }
 
-    // ✅ Chỉ xoá đúng 1 biến thể theo productId + size + color
+    // ✅ Chỉ xoá đúng variant
     cart.items = cart.items.filter(item =>
       !(
         item.productId.toString() === productId &&
@@ -108,7 +106,7 @@ const removeFromCart = async (req, res) => {
       )
     );
 
-    cart.total = await calculateCartTotal(cart.items);
+    cart.total = calculateCartTotal(cart.items);
     await cart.save();
 
     const populated = await Cart.findById(cart._id).populate("items.productId");
@@ -119,22 +117,9 @@ const removeFromCart = async (req, res) => {
   }
 };
 
-
-const calculateCartTotal = async (items) => {
-  let total = 0;
-  for (const item of items) {
-    const productData = await Product.findById(item.productId);
-    if (productData) {
-      const variant = productData.variants.find(
-        v => v.size === item.size && v.color === item.color
-      );
-      if (variant) {
-        total += variant.price * item.quantity;
-      }
-    }
-  }
-  return total;
+// 🧮 Hàm tính tổng dựa vào price đã lưu trong cart
+const calculateCartTotal = (items) => {
+  return items.reduce((total, item) => total + item.price * item.quantity, 0);
 };
-
 
 module.exports = { addToCart, getCart, removeFromCart };
