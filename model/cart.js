@@ -4,7 +4,8 @@ const cartItemSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: "product", required: true },
   size: { type: String },
   color: { type: String },
-  quantity: { type: Number, default: 1, min: 1 }
+  quantity: { type: Number, default: 1, min: 1 },
+  price: { type: Number, required: true }  // ✅ lưu giá của variant được chọn
 });
 
 const cartSchema = new mongoose.Schema({
