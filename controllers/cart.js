@@ -106,16 +106,21 @@ const removeFromCart = async (req, res) => {
 };
 
 
-// 🧮 Hàm tính tổng giỏ
 const calculateCartTotal = async (items) => {
   let total = 0;
   for (const item of items) {
     const productData = await Product.findById(item.productId);
     if (productData) {
-      total += productData.price * item.quantity;
+      const variant = productData.variants.find(
+        v => v.size === item.size && v.color === item.color
+      );
+      if (variant) {
+        total += variant.price * item.quantity;
+      }
     }
   }
   return total;
 };
+
 
 module.exports = { addToCart, getCart, removeFromCart };
