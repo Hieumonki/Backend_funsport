@@ -7,6 +7,7 @@ const addToCart = async (req, res) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
     }
+console.log("👉 req.user =", req.user);
 
     const userId = req.user.id;
     const { productId, size, color, quantity } = req.body;
