@@ -5,9 +5,7 @@ const { product: Product } = require("../model/model"); // lấy đúng model Pr
 const addToCart = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
-      return res
-        .status(401)
-        .json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
+      return res.status(401).json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
     }
 
     const userId = req.user.id;
@@ -22,6 +20,18 @@ const addToCart = async (req, res) => {
       cart = new Cart({ userId, items: [], total: 0 });
     }
 
+    // Lấy variant theo size + color
+    const productData = await Product.findById(productId);
+    if (!productData) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+    const variant = productData.variants.find(
+      v => v.size === size && v.color === color
+    );
+    if (!variant) {
+      return res.status(400).json({ message: "Biến thể không tồn tại" });
+    }
+
     const existing = cart.items.find(
       (item) =>
         item.productId.toString() === productId &&
@@ -32,7 +42,13 @@ const addToCart = async (req, res) => {
     if (existing) {
       existing.quantity += quantity || 1;
     } else {
-      cart.items.push({ productId, size, color, quantity: quantity || 1 });
+      cart.items.push({
+        productId,
+        size,
+        color,
+        quantity: quantity || 1,
+        price: variant.price,   // ✅ Lưu luôn giá để FE dễ render
+      });
     }
 
     cart.total = await calculateCartTotal(cart.items);
@@ -42,9 +58,7 @@ const addToCart = async (req, res) => {
     res.status(201).json(populated);
   } catch (err) {
     console.error("❌ Lỗi addToCart:", err);
-    res
-      .status(500)
-      .json({ message: "Lỗi server khi thêm giỏ hàng", error: err.message });
+    res.status(500).json({ message: "Lỗi server khi thêm giỏ hàng", error: err.message });
   }
 };
 
