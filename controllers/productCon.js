@@ -6,8 +6,6 @@ const productCon = {
   getProductStats: async (req, res) => {
     try {
       const totalProducts = await product.countDocuments();
-
-      // Tính toán theo variants
       const products = await product.find({}, "variants minStock");
 
       let inStockProducts = 0, outOfStockProducts = 0, lowStockProducts = 0;
@@ -26,7 +24,6 @@ const productCon = {
         lowStock: lowStockProducts
       });
     } catch (error) {
-      console.error("Error getting product stats:", error);
       res.status(500).json({ message: "Server error", error: error.message });
     }
   },
@@ -40,10 +37,8 @@ const productCon = {
         { $lookup: { from: "categories", localField: "category", foreignField: "_id", as: "category" } },
         { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } }
       ]);
-
       res.status(200).json(randomProducts);
     } catch (error) {
-      console.error("Error getting random products:", error);
       res.status(500).json({ message: "Server error", error: error.message });
     }
   },
@@ -51,49 +46,53 @@ const productCon = {
   // Add product
   addproduct: async (req, res) => {
     try {
-      console.log("Request body:", req.body);
-      
-      const { 
+      // Parse variants (nếu frontend gửi form-data)
+      let variants = req.body.variants;
+      if (typeof variants === "string") {
+        try {
+          variants = JSON.parse(variants);
+        } catch {
+          return res.status(400).json({ message: "Invalid variants format" });
+        }
+      }
+
+      const {
         name, 
         desc, 
         category: categoryId, 
-        image, 
-        variants, 
         minStock, 
         tab, 
         describe, 
         author: authorId 
       } = req.body;
 
-      // Validate required fields
       if (!name || !categoryId || !variants || !Array.isArray(variants) || variants.length === 0) {
-        return res.status(400).json({ 
-          message: "Name, category, and at least one variant are required",
-          received: { name, categoryId, variants }
-        });
+        return res.status(400).json({ message: "Name, category, and at least one variant are required" });
       }
 
-      // Validate category exists
+      // Validate category
       const categoryDoc = await category.findById(categoryId);
       if (!categoryDoc) {
         return res.status(400).json({ message: "Invalid category ID" });
       }
 
-      // Calculate status based on variants stock
+      // Lấy ảnh từ multer
+      const images = req.files && req.files.length > 0
+        ? req.files.map(file => file.filename)
+        : [];
+
+      // Tính status
       const calculatedMinStock = minStock || 5;
       const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
       let status = "instock";
-      if (totalStock === 0) {
-        status = "outofstock";
-      } else if (totalStock <= calculatedMinStock) {
-        status = "lowstock";
-      }
+      if (totalStock === 0) status = "outofstock";
+      else if (totalStock <= calculatedMinStock) status = "lowstock";
 
       const newProduct = new product({
         name,
         desc,
         category: categoryId,
-        image: Array.isArray(image) ? image : [image || ""],
+        image: images,
         variants,
         minStock: calculatedMinStock,
         tab,
@@ -102,36 +101,23 @@ const productCon = {
         status
       });
 
-      console.log("Product to save:", newProduct);
-
       const savedProduct = await newProduct.save();
-      console.log("Product saved:", savedProduct);
 
-      // Update author's product list if author is provided
+      // Gắn product vào author
       if (authorId && mongoose.Types.ObjectId.isValid(authorId)) {
-        try {
-          const authorData = await author.findById(authorId);
-          if (authorData) {
-            authorData.product = authorData.product || [];
-            authorData.product.push(savedProduct._id);
-            await authorData.save();
-          }
-        } catch (authorError) {
-          console.warn("Could not update author's product list:", authorError.message);
-        }
+        await author.findByIdAndUpdate(authorId, {
+          $push: { product: savedProduct._id }
+        });
       }
 
-      // Populate category information before returning
       const populatedProduct = await product.findById(savedProduct._id).populate("category", "name");
-
       res.status(201).json(populatedProduct);
     } catch (error) {
-      console.error("Error adding product:", error);
       res.status(500).json({ message: "Server error", error: error.message });
     }
   },
 
-  // Get all products with search & filter (no pagination backend)
+  // Get all products
   getAllproduct: async (req, res) => {
     try {
       const { keyword, category: categoryId } = req.query;
@@ -153,12 +139,8 @@ const productCon = {
         .populate("author", "name")
         .sort({ createdAt: -1 });
 
-      res.status(200).json({
-        products,
-        total: products.length
-      });
+      res.status(200).json({ products, total: products.length });
     } catch (error) {
-      console.error("Error getting all products:", error);
       res.status(500).json({ message: "Server error", error: error.message });
     }
   },
@@ -169,18 +151,14 @@ const productCon = {
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         return res.status(400).json({ message: "Invalid product ID" });
       }
-
       const foundProduct = await product.findById(req.params.id)
         .populate("category", "name")
         .populate("author", "name email");
-
       if (!foundProduct) {
         return res.status(404).json({ message: "Product not found" });
       }
-
       res.status(200).json(foundProduct);
     } catch (error) {
-      console.error("Error getting product:", error);
       res.status(500).json({ message: "Server error", error: error.message });
     }
   },
@@ -192,9 +170,24 @@ const productCon = {
         return res.status(400).json({ message: "Invalid product ID" });
       }
 
-      const { variants, minStock, ...otherFields } = req.body;
+      let variants = req.body.variants;
+      if (typeof variants === "string") {
+        try {
+          variants = JSON.parse(variants);
+        } catch {
+          return res.status(400).json({ message: "Invalid variants format" });
+        }
+      }
 
-      // Recalculate status if variants updated
+      const { minStock, ...otherFields } = req.body;
+
+      // Xử lý ảnh mới nếu có
+      let images = undefined;
+      if (req.files && req.files.length > 0) {
+        images = req.files.map(file => file.filename);
+      }
+
+      // Tính status
       let status;
       if (variants && Array.isArray(variants)) {
         const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
@@ -207,7 +200,8 @@ const productCon = {
         ...otherFields, 
         ...(variants && { variants }),
         ...(minStock && { minStock }),
-        ...(status && { status })
+        ...(status && { status }),
+        ...(images && { image: images })
       };
 
       const updatedProduct = await product.findByIdAndUpdate(
@@ -222,7 +216,6 @@ const productCon = {
 
       res.status(200).json(updatedProduct);
     } catch (error) {
-      console.error("Error updating product:", error);
       res.status(500).json({ message: "Server error", error: error.message });
     }
   },
@@ -233,33 +226,22 @@ const productCon = {
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         return res.status(400).json({ message: "Invalid product ID" });
       }
-
       const deletedProduct = await product.findByIdAndDelete(req.params.id);
-
       if (!deletedProduct) {
         return res.status(404).json({ message: "Product not found" });
       }
-
-      // Remove product from author's product list if author exists
       if (deletedProduct.author) {
-        try {
-          await author.findByIdAndUpdate(
-            deletedProduct.author,
-            { $pull: { product: deletedProduct._id } }
-          );
-        } catch (authorError) {
-          console.warn("Could not update author's product list:", authorError.message);
-        }
+        await author.findByIdAndUpdate(deletedProduct.author, {
+          $pull: { product: deletedProduct._id }
+        });
       }
-
       res.status(200).json({ message: "Product deleted successfully", product: deletedProduct });
     } catch (error) {
-      console.error("Error deleting product:", error);
       res.status(500).json({ message: "Server error", error: error.message });
     }
   },
 
-  // Get products by user/author
+  // Get products by user
   getProductsByUser: async (req, res) => {
     try {
       if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
@@ -286,7 +268,6 @@ const productCon = {
         total
       });
     } catch (error) {
-      console.error("Error getting products by user:", error);
       res.status(500).json({ message: "Server error", error: error.message });
     }
   }
