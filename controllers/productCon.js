@@ -31,7 +31,7 @@ const productCon = {
   // Get random products
   getRandomProducts: async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit, 10) || 10; // ✅ thêm radix cho chắc chắn
+      const limit = parseInt(req.query.limit, 10) || 10; 
       const randomProducts = await product.aggregate([
         { $sample: { size: limit } },
         {
@@ -76,18 +76,15 @@ const productCon = {
         return res.status(400).json({ message: "Name, category, and at least one variant are required" });
       }
 
-      // Validate category
       const categoryDoc = await category.findById(categoryId);
       if (!categoryDoc) {
         return res.status(400).json({ message: "Invalid category ID" });
       }
 
-      // Lấy ảnh từ multer
       const images = req.files && req.files.length > 0
         ? req.files.map(file => file.filename)
         : [];
 
-      // Tính status
       const calculatedMinStock = minStock || 5;
       const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
       let status = "instock";
@@ -116,8 +113,9 @@ const productCon = {
       }
 
       const populatedProduct = await product.findById(savedProduct._id)
-        .populate("category", "name")
-        .populate("author", "name"); // ✅ đồng bộ với FE
+        .populate("category", "_id name")   // ✅ sửa
+        .populate("author", "name");       
+
       res.status(201).json(populatedProduct);
     } catch (error) {
       res.status(500).json({ message: "Server error", error: error.message });
@@ -142,7 +140,7 @@ const productCon = {
       }
 
       const products = await product.find(filter)
-        .populate("category", "name")
+        .populate("category", "_id name")   // ✅ sửa
         .populate("author", "name")
         .sort({ createdAt: -1 });
 
@@ -159,8 +157,9 @@ const productCon = {
         return res.status(400).json({ message: "Invalid product ID" });
       }
       const foundProduct = await product.findById(req.params.id)
-        .populate("category", "name")
+        .populate("category", "_id name")   // ✅ sửa
         .populate("author", "name email");
+
       if (!foundProduct) {
         return res.status(404).json({ message: "Product not found" });
       }
@@ -214,8 +213,8 @@ const productCon = {
         updateData,
         { new: true, runValidators: true }
       )
-        .populate("category", "name")
-        .populate("author", "name"); // ✅ cho đồng bộ
+        .populate("category", "_id name")   // ✅ sửa
+        .populate("author", "name");
 
       if (!updatedProduct) {
         return res.status(404).json({ message: "Product not found" });
@@ -263,7 +262,7 @@ const productCon = {
       const skip = (page - 1) * limit;
 
       const products = await product.find({ author: req.params.userId })
-        .populate("category", "name")
+        .populate("category", "_id name")   // ✅ sửa
         .populate("author", "name email")
         .skip(skip)
         .limit(limit)
