@@ -32,6 +32,7 @@ router.get("/query", productCon.getAllproduct);
 
 // 👤 Lấy sản phẩm theo user (đặt TRƯỚC /:id)
 router.get("/user/:userId", productCon.getProductsByUser);
+router.get("/related/:productId", productCon.getRelatedProducts);
 
 // ➕ Thêm sản phẩm
 router.post("/", upload.array("image", 5), productCon.addproduct);

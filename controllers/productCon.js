@@ -31,7 +31,7 @@ const productCon = {
   // Get random products
   getRandomProducts: async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit, 10) || 10; 
+      const limit = parseInt(req.query.limit, 10) || 10;
       const randomProducts = await product.aggregate([
         { $sample: { size: limit } }
       ]);
@@ -107,7 +107,7 @@ const productCon = {
       }
 
       const populatedProduct = await product.findById(savedProduct._id)
-        .populate("author", "name");       
+        .populate("author", "name");
 
       res.status(201).json(populatedProduct);
     } catch (error) {
@@ -129,7 +129,11 @@ const productCon = {
       }
 
       if (categoryId) {
-        filter["category._id"] = categoryId;
+        if (mongoose.Types.ObjectId.isValid(categoryId)) {
+          filter["category._id"] = new mongoose.Types.ObjectId(categoryId);
+        } else {
+          return res.status(400).json({ message: "Invalid category ID" });
+        }
       }
 
       const products = await product.find(filter)
@@ -137,6 +141,31 @@ const productCon = {
         .sort({ createdAt: -1 });
 
       res.status(200).json({ products, total: products.length });
+    } catch (error) {
+      res.status(500).json({ message: "Server error", error: error.message });
+    }
+  },
+
+  // Get related products by category
+  getRelatedProducts: async (req, res) => {
+    try {
+      const { productId } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(productId)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+
+      const currentProduct = await product.findById(productId);
+      if (!currentProduct || !currentProduct.category?._id) {
+        return res.status(404).json({ message: "Product or category not found" });
+      }
+
+      const related = await product.find({
+        "category._id": new mongoose.Types.ObjectId(currentProduct.category._id),
+        _id: { $ne: productId } // loại bỏ chính sản phẩm hiện tại
+      }).limit(10);
+
+      res.status(200).json({ products: related, total: related.length });
     } catch (error) {
       res.status(500).json({ message: "Server error", error: error.message });
     }
