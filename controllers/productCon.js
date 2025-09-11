@@ -33,16 +33,7 @@ const productCon = {
     try {
       const limit = parseInt(req.query.limit, 10) || 10; 
       const randomProducts = await product.aggregate([
-        { $sample: { size: limit } },
-        {
-          $lookup: {
-            from: "categories",
-            localField: "category",
-            foreignField: "_id",
-            as: "category"
-          }
-        },
-        { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } }
+        { $sample: { size: limit } }
       ]);
       res.status(200).json(randomProducts);
     } catch (error) {
@@ -94,7 +85,10 @@ const productCon = {
       const newProduct = new product({
         name,
         desc,
-        category: categoryId,
+        category: {
+          _id: categoryDoc._id,
+          name: categoryDoc.name
+        }, // ✅ lưu object thay vì ObjectId
         image: images,
         variants,
         minStock: calculatedMinStock,
@@ -113,7 +107,6 @@ const productCon = {
       }
 
       const populatedProduct = await product.findById(savedProduct._id)
-        .populate("category", "_id name")   // ✅ sửa
         .populate("author", "name");       
 
       res.status(201).json(populatedProduct);
@@ -136,11 +129,10 @@ const productCon = {
       }
 
       if (categoryId) {
-        filter.category = categoryId;
+        filter["category._id"] = categoryId;
       }
 
       const products = await product.find(filter)
-        .populate("category", "_id name")   // ✅ sửa
         .populate("author", "name")
         .sort({ createdAt: -1 });
 
@@ -157,7 +149,6 @@ const productCon = {
         return res.status(400).json({ message: "Invalid product ID" });
       }
       const foundProduct = await product.findById(req.params.id)
-        .populate("category", "_id name")   // ✅ sửa
         .populate("author", "name email");
 
       if (!foundProduct) {
@@ -185,7 +176,7 @@ const productCon = {
         }
       }
 
-      const { minStock, ...otherFields } = req.body;
+      const { minStock, category: categoryId, ...otherFields } = req.body;
 
       let images;
       if (req.files && req.files.length > 0) {
@@ -208,12 +199,22 @@ const productCon = {
         ...(images && { image: images })
       };
 
+      if (categoryId) {
+        const categoryDoc = await category.findById(categoryId);
+        if (!categoryDoc) {
+          return res.status(400).json({ message: "Invalid category ID" });
+        }
+        updateData.category = {
+          _id: categoryDoc._id,
+          name: categoryDoc.name
+        };
+      }
+
       const updatedProduct = await product.findByIdAndUpdate(
         req.params.id,
         updateData,
         { new: true, runValidators: true }
       )
-        .populate("category", "_id name")   // ✅ sửa
         .populate("author", "name");
 
       if (!updatedProduct) {
@@ -262,7 +263,6 @@ const productCon = {
       const skip = (page - 1) * limit;
 
       const products = await product.find({ author: req.params.userId })
-        .populate("category", "_id name")   // ✅ sửa
         .populate("author", "name email")
         .skip(skip)
         .limit(limit)

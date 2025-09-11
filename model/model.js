@@ -10,6 +10,7 @@ const variantSchema = new mongoose.Schema({
 });
 
 /* ===== Product Schema ===== */
+/* ===== Product Schema ===== */
 const productSchema = new mongoose.Schema(
   {
     name: {
@@ -18,9 +19,12 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
     desc: String,
-    category: { type: mongoose.Schema.Types.ObjectId, ref: "category" },
+    category: {
+      _id: { type: mongoose.Schema.Types.ObjectId, ref: "category", required: true },
+      name: { type: String, required: true }
+    }, // ✅ embed object thay vì chỉ ObjectId
     image: [String],
-    variants: [variantSchema], // 🔥 thay cho price, quantity, color
+    variants: [variantSchema],
     minStock: {
       type: Number,
       default: 5,
@@ -39,6 +43,7 @@ const productSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
 productSchema.plugin(mongoosePaginate);
 
 /* ===== Category Schema ===== */
