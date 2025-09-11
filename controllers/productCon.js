@@ -146,30 +146,33 @@ const productCon = {
     }
   },
 
-  // Get related products by category
-  getRelatedProducts: async (req, res) => {
-    try {
-      const { productId } = req.params;
+// Get related products by category
+getRelatedProducts: async (req, res) => {
+  try {
+    const { productId } = req.params;
 
-      if (!mongoose.Types.ObjectId.isValid(productId)) {
-        return res.status(400).json({ message: "Invalid product ID" });
-      }
-
-      const currentProduct = await product.findById(productId);
-      if (!currentProduct || !currentProduct.category?._id) {
-        return res.status(404).json({ message: "Product or category not found" });
-      }
-
-      const related = await product.find({
-        "category._id": new mongoose.Types.ObjectId(currentProduct.category._id),
-        _id: { $ne: productId } // loại bỏ chính sản phẩm hiện tại
-      }).limit(10);
-
-      res.status(200).json({ products: related, total: related.length });
-    } catch (error) {
-      res.status(500).json({ message: "Server error", error: error.message });
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ message: "Invalid product ID" });
     }
-  },
+
+    const currentProduct = await product.findById(productId);
+    if (!currentProduct || !currentProduct.category?._id) {
+      return res.status(404).json({ message: "Product or category not found" });
+    }
+
+    // Vì category._id đang lưu dạng String, chỉ cần so sánh string
+    const related = await product.find({
+      "category._id": currentProduct.category._id, // 👈 bỏ new ObjectId
+      _id: { $ne: productId }
+    }).limit(10);
+
+    res.status(200).json({ products: related, total: related.length });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+},
+
+
 
   // Get a single product
   getAnproduct: async (req, res) => {

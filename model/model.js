@@ -9,8 +9,7 @@ const variantSchema = new mongoose.Schema({
   stock: { type: Number, default: 0 },
 });
 
-/* ===== Product Schema ===== */
-/* ===== Product Schema ===== */
+
 const productSchema = new mongoose.Schema(
   {
     name: {
