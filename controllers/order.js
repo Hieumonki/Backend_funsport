@@ -13,19 +13,18 @@ const createOrderAndPayWithMoMo = async (req, res) => {
     const { cartItems, customerInfo, amount, payment } = req.body;
     const userId = req.user?.id || null;
 
-    console.log("📥 Request body:", req.body);   // 👈 log toàn bộ body nhận được
+    console.log("📥 Request body:", req.body);
 
     if (!Array.isArray(cartItems) || cartItems.length === 0) {
       return res.status(400).json({ message: 'Giỏ hàng trống' });
     }
 
-    // Lấy chi tiết sản phẩm từ DB
+    // Lấy chi tiết sản phẩm từ DB (có variant)
     const detailedCartItems = await Promise.all(
       cartItems.map(async (item) => {
-        console.log("🔎 Đang tìm productId:", item.productId);  // 👈 log productId
+        console.log("🔎 Đang tìm productId:", item.productId);
 
         const product = await Product.findById(item.productId);
-
         if (!product) {
           console.error(`❌ Không tìm thấy sản phẩm với ID: ${item.productId}`);
           throw new Error(`Không tìm thấy sản phẩm với ID: ${item.productId}`);
@@ -33,12 +32,25 @@ const createOrderAndPayWithMoMo = async (req, res) => {
 
         console.log("✅ Tìm thấy sản phẩm:", product._id, product.name);
 
+        // tìm variant theo size + color từ frontend
+        const variant = product.variants.find(
+          (v) => v.size === item.size && v.color === item.color
+        );
+
+        if (!variant) {
+          throw new Error(
+            `❌ Không tìm thấy biến thể cho ${product.name} (${item.size}, ${item.color})`
+          );
+        }
+
         return {
           productId: product._id,
           name: product.name,
-          price: product.price,
+          price: variant.price, // ✅ lấy giá từ variant
           quantity: item.quantity || 1,
-          image: Array.isArray(product.image) ? product.image[0] : product.image
+          image: Array.isArray(product.image) ? product.image[0] : product.image,
+          size: variant.size,
+          color: variant.color,
         };
       })
     );
@@ -55,13 +67,10 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       payment: payment || 'momo_test',
       status: 'Chờ Xử Lý',
       isLocked: false,
-      createdAt: new Date()
+      createdAt: new Date(),
     });
 
     console.log("📝 Đơn hàng đã lưu:", newOrder);
-
-    // ... phần MoMo request giữ nguyên
-
 
     // ===== MoMo Test Config =====
     const endpoint = 'https://test-payment.momo.vn/v2/gateway/api/create';
@@ -81,7 +90,8 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       `&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}` +
       `&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
 
-    const signature = crypto.createHmac('sha256', secretKey)
+    const signature = crypto
+      .createHmac('sha256', secretKey)
       .update(rawSignature)
       .digest('hex');
 
@@ -97,17 +107,17 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       requestType,
       autoCapture: true,
       signature,
-      lang: 'vi'
+      lang: 'vi',
     };
 
     const momoRes = await axios.post(endpoint, requestBody, {
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
 
     return res.status(201).json({
       message: 'Tạo đơn hàng thành công',
       order: newOrder,
-      payUrl: momoRes.data?.payUrl || null
+      payUrl: momoRes.data?.payUrl || null,
     });
   } catch (err) {
     console.error('❌ Lỗi khi tạo đơn hàng MoMo:', err);
@@ -135,8 +145,8 @@ const getAllOrders = async (req, res) => {
     const orders = await Order.find()
       .populate({
         path: 'cartItems.productId',
-        select: 'name price category image',
-        populate: { path: 'category', select: 'name' }
+        select: 'name category image',
+        populate: { path: 'category', select: 'name' },
       })
       .sort({ createdAt: -1 });
 
@@ -155,8 +165,8 @@ const getOrdersByUser = async (req, res) => {
     const orders = await Order.find({ userId })
       .populate({
         path: 'cartItems.productId',
-        select: 'name price category image',
-        populate: { path: 'category', select: 'name' }
+        select: 'name category image',
+        populate: { path: 'category', select: 'name' },
       })
       .sort({ createdAt: -1 });
 
@@ -171,13 +181,13 @@ const getOrdersByUser = async (req, res) => {
  */
 const getOrderById = async (req, res) => {
   try {
-    const order = await Order.findOne({ orderId: req.params.id })
-      .populate({
-        path: 'cartItems.productId',
-        populate: { path: 'category', model: 'category' }
-      });
+    const order = await Order.findOne({ orderId: req.params.id }).populate({
+      path: 'cartItems.productId',
+      populate: { path: 'category', model: 'category' },
+    });
 
-    if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
+    if (!order)
+      return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
     res.status(200).json(order);
   } catch (err) {
     res.status(500).json({ message: 'Lỗi lấy đơn hàng: ' + err.message });
@@ -195,7 +205,8 @@ const updateOrder = async (req, res) => {
       { new: true }
     );
 
-    if (!updatedOrder) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
+    if (!updatedOrder)
+      return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
     res.status(200).json(updatedOrder);
   } catch (err) {
     res.status(500).json({ message: 'Lỗi cập nhật đơn hàng: ' + err.message });
@@ -208,9 +219,13 @@ const updateOrder = async (req, res) => {
 const deleteOrder = async (req, res) => {
   try {
     const userId = req.user.id;
-    const deletedOrder = await Order.findOneAndDelete({ orderId: req.params.id, userId });
+    const deletedOrder = await Order.findOneAndDelete({
+      orderId: req.params.id,
+      userId,
+    });
 
-    if (!deletedOrder) return res.status(404).json({ message: 'Không tìm thấy đơn hàng của bạn' });
+    if (!deletedOrder)
+      return res.status(404).json({ message: 'Không tìm thấy đơn hàng của bạn' });
     res.status(200).json({ message: 'Đã xóa đơn hàng' });
   } catch (err) {
     res.status(500).json({ message: 'Lỗi xóa đơn hàng: ' + err.message });
@@ -225,7 +240,8 @@ const cancelOrder = async (req, res) => {
     const userId = req.user.id;
     const order = await Order.findOne({ orderId: req.params.id, userId });
 
-    if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng của bạn' });
+    if (!order)
+      return res.status(404).json({ message: 'Không tìm thấy đơn hàng của bạn' });
 
     order.status = 'Đã huỷ đơn';
     await order.save();
@@ -242,7 +258,8 @@ const cancelOrder = async (req, res) => {
 const cancelOrderByCode = async (req, res) => {
   try {
     const order = await Order.findOne({ orderId: req.params.orderId });
-    if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng với mã này' });
+    if (!order)
+      return res.status(404).json({ message: 'Không tìm thấy đơn hàng với mã này' });
 
     order.status = 'Đã huỷ đơn';
     await order.save();
@@ -259,12 +276,15 @@ const cancelOrderByCode = async (req, res) => {
 const toggleOrderLock = async (req, res) => {
   try {
     const order = await Order.findOne({ orderId: req.params.id });
-    if (!order) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
+    if (!order)
+      return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
 
     order.isLocked = !order.isLocked;
     await order.save();
 
-    res.status(200).json({ message: order.isLocked ? 'Đã khóa đơn hàng' : 'Đã mở khóa đơn hàng' });
+    res
+      .status(200)
+      .json({ message: order.isLocked ? 'Đã khóa đơn hàng' : 'Đã mở khóa đơn hàng' });
   } catch (err) {
     res.status(500).json({ message: 'Lỗi: ' + err.message });
   }
@@ -282,8 +302,8 @@ const getRevenueByCategory = async (req, res) => {
           from: 'products',
           localField: 'cartItems.productId',
           foreignField: '_id',
-          as: 'productInfo'
-        }
+          as: 'productInfo',
+        },
       },
       { $unwind: { path: '$productInfo', preserveNullAndEmptyArrays: true } },
       {
@@ -291,8 +311,8 @@ const getRevenueByCategory = async (req, res) => {
           from: 'categories',
           localField: 'productInfo.categoryId',
           foreignField: '_id',
-          as: 'categoryInfo'
-        }
+          as: 'categoryInfo',
+        },
       },
       { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
       {
@@ -302,12 +322,12 @@ const getRevenueByCategory = async (req, res) => {
             $sum: {
               $multiply: [
                 { $ifNull: ['$cartItems.quantity', 0] },
-                { $ifNull: ['$cartItems.price', 0] }
-              ]
-            }
-          }
-        }
-      }
+                { $ifNull: ['$cartItems.price', 0] },
+              ],
+            },
+          },
+        },
+      },
     ]);
 
     res.json(revenue);
@@ -327,5 +347,5 @@ module.exports = {
   cancelOrder,
   cancelOrderByCode,
   toggleOrderLock,
-  getRevenueByCategory
+  getRevenueByCategory,
 };
