@@ -11,28 +11,34 @@ const { product: Product } = require('../model/model.js');
 const createOrderAndPayWithMoMo = async (req, res) => {
   try {
     const { cartItems, customerInfo, amount, payment } = req.body;
-    const userId = req.user?.id; // 👈 lấy từ middleware auth
+    const userId = req.user?.id || null;
 
-    if (!userId) return res.status(401).json({ message: 'Bạn phải đăng nhập để đặt hàng' });
+    console.log("📥 Request body:", req.body);   // 👈 log toàn bộ body nhận được
+
     if (!Array.isArray(cartItems) || cartItems.length === 0) {
       return res.status(400).json({ message: 'Giỏ hàng trống' });
-    }
-    if (!customerInfo?.fullName || !customerInfo?.phone) {
-      return res.status(400).json({ message: 'Thiếu thông tin khách hàng (fullName, phone)' });
     }
 
     // Lấy chi tiết sản phẩm từ DB
     const detailedCartItems = await Promise.all(
       cartItems.map(async (item) => {
+        console.log("🔎 Đang tìm productId:", item.productId);  // 👈 log productId
+
         const product = await Product.findById(item.productId);
-        if (!product) throw new Error(`Không tìm thấy sản phẩm với ID: ${item.productId}`);
+
+        if (!product) {
+          console.error(`❌ Không tìm thấy sản phẩm với ID: ${item.productId}`);
+          throw new Error(`Không tìm thấy sản phẩm với ID: ${item.productId}`);
+        }
+
+        console.log("✅ Tìm thấy sản phẩm:", product._id, product.name);
+
         return {
           productId: product._id,
           name: product.name,
           price: product.price,
           quantity: item.quantity || 1,
-      image: Array.isArray(product.image) ? product.image[0] : product.image
-
+          image: Array.isArray(product.image) ? product.image[0] : product.image
         };
       })
     );
@@ -42,7 +48,7 @@ const createOrderAndPayWithMoMo = async (req, res) => {
     // ✅ Lưu đơn hàng vào DB
     const newOrder = await Order.create({
       orderId: orderCode,
-      userId, // 👈 Lưu userId
+      userId,
       cartItems: detailedCartItems,
       customerInfo,
       amount,
@@ -51,6 +57,11 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       isLocked: false,
       createdAt: new Date()
     });
+
+    console.log("📝 Đơn hàng đã lưu:", newOrder);
+
+    // ... phần MoMo request giữ nguyên
+
 
     // ===== MoMo Test Config =====
     const endpoint = 'https://test-payment.momo.vn/v2/gateway/api/create';
