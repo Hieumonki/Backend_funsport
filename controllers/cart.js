@@ -176,6 +176,33 @@ const decreaseFromCart = async (req, res) => {
   }
 };
 
+// ❌ Xoá toàn bộ giỏ hàng của user
+const clearCart = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
+    }
+
+    const userId = req.user.id;
+
+    let cart = await Cart.findOne({ userId });
+    if (!cart) {
+      return res.status(404).json({ message: "Không tìm thấy giỏ hàng" });
+    }
+
+    // Xóa hết item và reset total
+    cart.items = [];
+    cart.total = 0;
+    await cart.save();
+
+    res.json({ message: "Đã xoá toàn bộ giỏ hàng thành công", cart });
+  } catch (err) {
+    console.error("❌ Lỗi clearCart:", err);
+    res.status(500).json({ message: "Lỗi server khi xoá giỏ hàng", error: err.message });
+  }
+};
+
+
 // ✅ Hàm tính tổng an toàn
 const calculateCartTotal = (items) => {
   return items.reduce((sum, item) => {
@@ -185,4 +212,4 @@ const calculateCartTotal = (items) => {
   }, 0);
 };
 
-module.exports = { addToCart, getCart, removeFromCart,  decreaseFromCart    };
+module.exports = { addToCart, getCart, removeFromCart, decreaseFromCart, clearCart };

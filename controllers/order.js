@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const axios = require('axios');
+const Cart = require('../model/cart.js');
 const Order = require('../model/order.js');
 const { product: Product } = require('../model/model.js');
 
@@ -124,6 +125,13 @@ const createOrderAndPayWithMoMo = async (req, res) => {
     res.status(500).json({ message: 'Lỗi khi tạo đơn hàng: ' + err.message });
   }
 };
+// controllers/order.js
+
+const crypto = require('crypto');
+const axios = require('axios');
+const Order = require('../model/order.js');
+const { product: Product } = require('../model/model.js');
+const Cart = require('../model/cart.js'); // ✅ thêm import giỏ hàng
 
 /**
  * 📌 MoMo IPN handler
@@ -131,8 +139,28 @@ const createOrderAndPayWithMoMo = async (req, res) => {
 const momoIpnHandler = async (req, res) => {
   try {
     console.log('📥 Nhận IPN từ MoMo:', req.body);
+
+    const { orderId, resultCode } = req.body;
+
+    // ✅ Nếu thanh toán thành công
+    if (resultCode === 0) {
+      const order = await Order.findOne({ orderId });
+
+      if (order) {
+        order.status = 'Đã thanh toán';
+        await order.save();
+
+        // ✅ Xoá giỏ hàng của user sau khi thanh toán
+        if (order.userId) {
+          await Cart.findOneAndDelete({ userId: order.userId });
+          console.log(`🛒 Đã xoá giỏ hàng của user ${order.userId}`);
+        }
+      }
+    }
+
     res.status(200).json({ message: 'IPN nhận thành công' });
   } catch (err) {
+    console.error("❌ Lỗi IPN MoMo:", err);
     res.status(500).json({ message: 'Lỗi IPN MoMo: ' + err.message });
   }
 };
