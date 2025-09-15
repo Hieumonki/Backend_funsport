@@ -81,7 +81,7 @@ const createOrderAndPayWithMoMo = async (req, res) => {
     const requestId = orderCode;
     const orderId = orderCode;
     const orderInfo = `Thanh toán đơn hàng ${orderCode}`;
-    const redirectUrl = 'http://localhost:4200/home';
+    const redirectUrl = 'http://localhost:4200/checkout';
     const ipnUrl = 'http://localhost:3000/api/momo-ipn';
     const extraData = '';
     const requestType = 'payWithMethod';
