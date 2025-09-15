@@ -176,16 +176,17 @@ const decreaseFromCart = async (req, res) => {
   }
 };
 
-// ❌ Xoá toàn bộ giỏ hàng của user
 const clearCart = async (req, res) => {
   try {
+    console.log("📥 clearCart API được gọi bởi user:", req.user?.id);
+
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: "Token không hợp lệ hoặc chưa đăng nhập" });
     }
 
     const userId = req.user.id;
-
     let cart = await Cart.findOne({ userId });
+
     if (!cart) {
       return res.status(404).json({ message: "Không tìm thấy giỏ hàng" });
     }
@@ -194,6 +195,8 @@ const clearCart = async (req, res) => {
     cart.items = [];
     cart.total = 0;
     await cart.save();
+
+    console.log("🛒 Giỏ hàng sau khi clear:", cart);
 
     res.json({ message: "Đã xoá toàn bộ giỏ hàng thành công", cart });
   } catch (err) {
