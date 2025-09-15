@@ -125,30 +125,43 @@ const createOrderAndPayWithMoMo = async (req, res) => {
     res.status(500).json({ message: 'Lỗi khi tạo đơn hàng: ' + err.message });
   }
 };
-/**
- * 📌 MoMo IPN handler
- */
 const momoIpnHandler = async (req, res) => {
   try {
     console.log('📥 Nhận IPN từ MoMo:', req.body);
 
     const { orderId, resultCode } = req.body;
 
-    if (order.userId) {
-      let cart = await Cart.findOne({ userId: order.userId });
-      if (cart) {
-        cart.items = [];
-        cart.total = 0;
-        await cart.save();
-        console.log(`🛒 Đã clear giỏ hàng của user ${order.userId}`);
-      }
+    const order = await Order.findOne({ orderId });
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
 
+    if (resultCode === 0) {
+      // ✅ Thanh toán thành công
+      order.status = "Đã thanh toán";
+      await order.save();
 
-    res.status(200).json({ message: 'IPN nhận thành công' });
+      // ✅ Clear giỏ hàng (không xóa hẳn)
+      if (order.userId) {
+        let cart = await Cart.findOne({ userId: order.userId });
+        if (cart) {
+          cart.items = [];
+          cart.total = 0;
+          await cart.save();
+          console.log(`🛒 Đã clear giỏ hàng user ${order.userId}`);
+        }
+      }
+    } else {
+      // ❌ Thanh toán thất bại
+      order.status = "Thanh toán thất bại";
+      await order.save();
+      console.log(`⚠️ Thanh toán thất bại cho order ${orderId}`);
+    }
+
+    res.status(200).json({ message: "IPN xử lý thành công" });
   } catch (err) {
     console.error("❌ Lỗi IPN MoMo:", err);
-    res.status(500).json({ message: 'Lỗi IPN MoMo: ' + err.message });
+    res.status(500).json({ message: "Lỗi IPN MoMo: " + err.message });
   }
 };
 
