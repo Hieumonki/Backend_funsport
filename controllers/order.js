@@ -134,21 +134,16 @@ const momoIpnHandler = async (req, res) => {
 
     const { orderId, resultCode } = req.body;
 
-    // ✅ Nếu thanh toán thành công
-    if (resultCode === 0) {
-      const order = await Order.findOne({ orderId });
-
-      if (order) {
-        order.status = 'Đã thanh toán';
-        await order.save();
-
-        // ✅ Xoá giỏ hàng của user sau khi thanh toán
-        if (order.userId) {
-          await Cart.findOneAndDelete({ userId: order.userId });
-          console.log(`🛒 Đã xoá giỏ hàng của user ${order.userId}`);
-        }
+    if (order.userId) {
+      let cart = await Cart.findOne({ userId: order.userId });
+      if (cart) {
+        cart.items = [];
+        cart.total = 0;
+        await cart.save();
+        console.log(`🛒 Đã clear giỏ hàng của user ${order.userId}`);
       }
     }
+
 
     res.status(200).json({ message: 'IPN nhận thành công' });
   } catch (err) {
