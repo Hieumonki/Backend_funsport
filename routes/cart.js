@@ -6,5 +6,6 @@ router.post("/add", varifyToken, addToCart);
 router.get("/", varifyToken, getCart);
 router.post("/remove", varifyToken, removeFromCart);
 router.post("/decrease", varifyToken, decreaseFromCart);
-router.delete("/clear", varifyToken, clearCart);
+router.post("/clear", varifyToken, clearCart);
+
 module.exports = router;
