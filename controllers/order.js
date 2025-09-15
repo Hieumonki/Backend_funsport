@@ -125,14 +125,6 @@ const createOrderAndPayWithMoMo = async (req, res) => {
     res.status(500).json({ message: 'Lỗi khi tạo đơn hàng: ' + err.message });
   }
 };
-// controllers/order.js
-
-const crypto = require('crypto');
-const axios = require('axios');
-const Order = require('../model/order.js');
-const { product: Product } = require('../model/model.js');
-const Cart = require('../model/cart.js'); // ✅ thêm import giỏ hàng
-
 /**
  * 📌 MoMo IPN handler
  */
