@@ -242,11 +242,16 @@ productSellSchema.plugin(mongoosePaginate);
 
 /* ===== BestSeller Schema ===== */
 const bestSellerSchema = new mongoose.Schema({
-  name: String,
-  image: String,
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  image: { type: [String], default: [] }, // ✅ array of string
   price: {
     type: Number,
     min: 0,
+    required: true,
   },
   priceold: {
     type: Number,
@@ -259,6 +264,7 @@ const bestSellerSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
 bestSellerSchema.plugin(mongoosePaginate);
 
 /* ===== Export Models ===== */
