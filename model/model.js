@@ -221,7 +221,7 @@ const productSellSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
-  image: String,
+  image: { type: [String], default: [] }, // ✅ array of string
   price: {
     type: Number,
     required: true,
@@ -237,6 +237,7 @@ const productSellSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
 productSellSchema.plugin(mongoosePaginate);
 
 /* ===== BestSeller Schema ===== */

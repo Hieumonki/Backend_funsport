@@ -5,12 +5,12 @@ const productSellCon = {
   addProductSell: async (req, res) => {
     try {
       console.log("Adding product sell with data:", req.body);
-      
+
       const { name, price, image, priceold, category } = req.body;
 
       // Validate required fields
       if (!name || !price) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Name and price are required",
           received: { name, price }
         });
@@ -28,36 +28,37 @@ const productSellCon = {
       const newProduct = new productsell({
         name: name.trim(),
         price: Number(price),
-        image: image || '',
+        image: Array.isArray(image) ? image : (image ? [image] : []), // luôn array
         priceold: priceold ? Number(priceold) : undefined,
         category: category || '',
       });
 
+
       const saved = await newProduct.save();
       console.log("Product sell saved:", saved);
-      
+
       res.status(201).json(saved);
     } catch (error) {
       console.error("Error adding product sell:", error);
-      
+
       if (error.name === 'ValidationError') {
         const validationErrors = Object.values(error.errors).map(err => err.message);
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: validationErrors 
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationErrors
         });
       }
 
       if (error.code === 11000) {
-        return res.status(400).json({ 
-          message: "Duplicate product name", 
-          field: Object.keys(error.keyPattern)[0] 
+        return res.status(400).json({
+          message: "Duplicate product name",
+          field: Object.keys(error.keyPattern)[0]
         });
       }
 
-      res.status(500).json({ 
-        message: "Server error", 
-        error: error.message 
+      res.status(500).json({
+        message: "Server error",
+        error: error.message
       });
     }
   },
@@ -90,13 +91,13 @@ const productSellCon = {
 
       const data = await query.exec();
       console.log(`Retrieved ${data.length} product sell items`);
-      
+
       res.status(200).json(data);
     } catch (error) {
       console.error("Error getting all product sell:", error);
-      res.status(500).json({ 
-        message: "Server error", 
-        error: error.message 
+      res.status(500).json({
+        message: "Server error",
+        error: error.message
       });
     }
   },
@@ -110,7 +111,7 @@ const productSellCon = {
       }
 
       const data = await productsell.findById(id);
-      
+
       if (!data) {
         return res.status(404).json({ message: "Product not found" });
       }
@@ -118,9 +119,9 @@ const productSellCon = {
       res.status(200).json(data);
     } catch (error) {
       console.error("Error getting product sell:", error);
-      res.status(500).json({ 
-        message: "Server error", 
-        error: error.message 
+      res.status(500).json({
+        message: "Server error",
+        error: error.message
       });
     }
   },
@@ -156,7 +157,7 @@ const productSellCon = {
       }
 
       const updatedProduct = await productsell.findByIdAndUpdate(
-        id, 
+        id,
         { $set: updateData },
         { new: true, runValidators: true }
       );
@@ -172,18 +173,18 @@ const productSellCon = {
       });
     } catch (error) {
       console.error("Error updating product sell:", error);
-      
+
       if (error.name === 'ValidationError') {
         const validationErrors = Object.values(error.errors).map(err => err.message);
-        return res.status(400).json({ 
-          message: "Validation error", 
-          errors: validationErrors 
+        return res.status(400).json({
+          message: "Validation error",
+          errors: validationErrors
         });
       }
 
-      res.status(500).json({ 
-        message: "Server error", 
-        error: error.message 
+      res.status(500).json({
+        message: "Server error",
+        error: error.message
       });
     }
   },
@@ -197,21 +198,21 @@ const productSellCon = {
       }
 
       const deletedProduct = await productsell.findByIdAndDelete(id);
-      
+
       if (!deletedProduct) {
         return res.status(404).json({ message: "Product not found" });
       }
 
       console.log("Product sell deleted:", deletedProduct._id);
-      res.status(200).json({ 
+      res.status(200).json({
         message: "Xóa thành công",
         deletedProduct: deletedProduct
       });
     } catch (error) {
       console.error("Error deleting product sell:", error);
-      res.status(500).json({ 
-        message: "Server error", 
-        error: error.message 
+      res.status(500).json({
+        message: "Server error",
+        error: error.message
       });
     }
   },
@@ -239,9 +240,9 @@ const productSellCon = {
       res.status(200).json(stats);
     } catch (error) {
       console.error("Error getting product sell stats:", error);
-      res.status(500).json({ 
-        message: "Server error", 
-        error: error.message 
+      res.status(500).json({
+        message: "Server error",
+        error: error.message
       });
     }
   },
@@ -249,7 +250,7 @@ const productSellCon = {
   searchProductSell: async (req, res) => {
     try {
       const { q } = req.query;
-      
+
       if (!q || q.trim() === '') {
         return res.status(400).json({ message: "Search query is required" });
       }
@@ -268,9 +269,9 @@ const productSellCon = {
       res.status(200).json(results);
     } catch (error) {
       console.error("Error searching product sell:", error);
-      res.status(500).json({ 
-        message: "Server error", 
-        error: error.message 
+      res.status(500).json({
+        message: "Server error",
+        error: error.message
       });
     }
   }
