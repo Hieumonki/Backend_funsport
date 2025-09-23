@@ -66,7 +66,7 @@ const createOrderAndPayWithMoMo = async (req, res) => {
       customerInfo,
       amount,
       payment: payment || 'momo_test',
-      status: 'Chờ Xử Lý',
+      status: 'pending',
       isLocked: false,
       createdAt: new Date(),
     });
