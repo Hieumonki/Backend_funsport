@@ -1,4 +1,4 @@
-const { bestseller } = require('../model/model'); // model tên "bestseller"
+const { bestseller } = require('../model/model'); // model gốc, giữ nguyên DB
 
 // Lấy tất cả bestseller
 exports.getAllBestSellers = async (req, res) => {
