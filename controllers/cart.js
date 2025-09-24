@@ -1,5 +1,5 @@
 const Cart = require("../model/cart");
-const { product: Product, productsell: ProductSell } = require("../model/model");
+const { product: Product } = require("../model/model");
 
 // ➕ Thêm sản phẩm vào giỏ
 const addToCart = async (req, res) => {
@@ -13,8 +13,10 @@ const addToCart = async (req, res) => {
     const userId = req.user.id;
     const { productId, size, color, quantity } = req.body;
 
-    if (!productId) {
-      return res.status(400).json({ message: "Thiếu productId" });
+    if (!productId || !color) {
+      return res
+        .status(400)
+        .json({ message: "Thiếu productId / color (size có thể bỏ trống)" });
     }
 
     const qty = Number(quantity) || 1;
@@ -27,60 +29,49 @@ const addToCart = async (req, res) => {
       cart = new Cart({ userId, items: [], total: 0 });
     }
 
-    // 🔍 Lấy sản phẩm (cả 2 collection)
-    let productData = await Product.findById(productId);
-    let isSell = false;
-
-    if (!productData) {
-      productData = await ProductSell.findById(productId);
-      if (productData) isSell = true;
-    }
-
+    // 🔍 Lấy sản phẩm & variant
+    const productData = await Product.findById(productId);
     if (!productData) {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
-    let price;
-    let variantKey = { size: size || null, color: color || null };
-
-    if (isSell) {
-      // ✅ productSell: chỉ lấy price
-      price = Number(productData.price);
-      variantKey = { size: null, color: null };
-    } else {
-      // ✅ product: tìm variant theo size + color
-      const variant = productData.variants.find((v) => {
-        if (v.size) return v.size === size && v.color === color;
-        return v.color === color;
-      });
-
-      if (!variant) {
-        return res.status(400).json({ message: "Biến thể không tồn tại" });
+    // ✅ Tìm variant theo color (và size nếu có)
+    const variant = productData.variants.find((v) => {
+      if (v.size) {
+        return v.size === size && v.color === color;
       }
-      price = Number(variant.price);
+      return v.color === color;
+    });
+
+    if (!variant) {
+      return res.status(400).json({ message: "Biến thể không tồn tại" });
     }
 
-    // 🔄 Kiểm tra item tồn tại trong giỏ
+    if (variant.price === undefined || variant.price === null) {
+      return res.status(400).json({ message: "Biến thể chưa có giá bán" });
+    }
+
+    // 🔄 Kiểm tra item tồn tại
     const existing = cart.items.find(
       (item) =>
         item.productId.toString() === productId &&
-        (item.color || null) === (variantKey.color || null) &&
-        (item.size || null) === (variantKey.size || null)
+        item.color === color &&
+        (item.size || "") === (size || "")
     );
 
     if (existing) {
       existing.quantity += qty;
-      existing.price = price;
+      existing.price = Number(variant.price);
       if (existing.quantity <= 0) {
         cart.items = cart.items.filter((i) => i !== existing);
       }
     } else {
       cart.items.push({
         productId,
-        size: variantKey.size,
-        color: variantKey.color,
+        size: size || null,
+        color,
         quantity: qty,
-        price,
+        price: Number(variant.price),
       });
     }
 
@@ -142,8 +133,8 @@ const removeFromCart = async (req, res) => {
       (item) =>
         !(
           item.productId.toString() === productId &&
-          (item.color || null) === (color || null) &&
-          (item.size || null) === (size || null)
+          item.color === color &&
+          (item.size || "") === (size || "")
         )
     );
 
@@ -178,8 +169,8 @@ const decreaseFromCart = async (req, res) => {
     const itemIndex = cart.items.findIndex(
       (item) =>
         item.productId._id.toString() === productId &&
-        (item.color || null) === (color || null) &&
-        (item.size || null) === (size || null)
+        item.color === color &&
+        (item.size || "") === (size || "")
     );
 
     if (itemIndex === -1) {
