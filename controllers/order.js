@@ -464,6 +464,54 @@ const getRevenueByCategory = async (req, res) => {
   }
 };
 
+/**
+ * 📌 Doanh thu theo ngày (hoặc khoảng thời gian)
+ * Query: ?startDate=2025-09-01&endDate=2025-09-10
+ */
+const getRevenueByDate = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const matchStage = {};
+    if (startDate || endDate) {
+      matchStage.createdAt = {};
+      if (startDate) matchStage.createdAt.$gte = new Date(startDate);
+      if (endDate) matchStage.createdAt.$lte = new Date(endDate);
+    }
+
+    const revenue = await Order.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+          },
+          totalRevenue: {
+            $sum: {
+              $reduce: {
+                input: '$cartItems',
+                initialValue: 0,
+                in: {
+                  $add: [
+                    '$$value',
+                    { $multiply: ['$$this.price', '$$this.quantity'] }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    return res.json(revenue);
+  } catch (err) {
+    console.error('getRevenueByDate error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   createOrderAndPayWithMoMo,
   momoIpnHandler,
@@ -476,4 +524,5 @@ module.exports = {
   cancelOrderByCode,
   toggleOrderLock,
   getRevenueByCategory,
+  getRevenueByDate
 };

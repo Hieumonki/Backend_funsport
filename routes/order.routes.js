@@ -12,6 +12,8 @@ router.post('/payment-notify', orderController.momoIpnHandler);
 
 // ================= Stats =================
 router.get('/revenue-by-category', isAdmin, orderController.getRevenueByCategory);
+router.get('/revenue-by-date', isAdmin, orderController.getRevenueByDate);
+
 
 // ================= Orders (User) =================
 router.get('/my', varifyToken, orderController.getOrdersByUser);
@@ -20,7 +22,7 @@ router.patch('/code/:orderId/cancel', varifyToken, orderController.cancelOrderBy
 router.patch('/:id/cancel', varifyToken, orderController.cancelOrder);
 
 // ================= Orders (Admin) =================
-router.get('/', isAdmin, orderController.getAllOrders);   // chỉ admin mới được lấy tất cả
+router.get('/', isAdmin, orderController.getAllOrders);  
 router.put('/:id', isAdmin, orderController.updateOrder);
 router.delete('/:id', isAdmin, orderController.deleteOrder);
 router.patch('/:id/lock', isAdmin, orderController.toggleOrderLock);
