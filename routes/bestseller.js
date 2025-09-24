@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const bestSellerController = require('../controllers/bestsellerCon');
+const bestsellerCon = require('../controllers/bestsellerCon');
 
-// API: GET /v1/bestseller
-router.get('/', bestSellerController.getAllBestSellers);
+// Chỉ GET & POST (giống product)
+router.get('/', bestsellerCon.getAllBestSellers);
+router.get('/:id', bestsellerCon.getBestSellerById);
+router.post('/', bestsellerCon.createBestSeller);
 
 module.exports = router;
