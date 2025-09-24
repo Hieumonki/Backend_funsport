@@ -44,31 +44,21 @@ const addToCart = async (req, res) => {
     let variantKey = { size: size || null, color: color || null };
 
     if (isSell) {
-  // ✅ productSell: cũng tìm variant theo size + color
-  const variant = productData.variants.find(
-    (v) => v.size === size && v.color === color
-  );
+      // ✅ productSell: chỉ lấy price
+      price = Number(productData.price);
+      variantKey = { size: null, color: null };
+    } else {
+      // ✅ product: tìm variant theo size + color
+      const variant = productData.variants.find((v) => {
+        if (v.size) return v.size === size && v.color === color;
+        return v.color === color;
+      });
 
-  if (!variant) {
-    return res.status(400).json({ message: "Biến thể không tồn tại" });
-  }
-
-  price = Number(variant.price);
-  variantKey = { size, color };
-} else {
-  // ✅ product: tìm variant theo size + color
-  const variant = productData.variants.find(
-    (v) => v.size === size && v.color === color
-  );
-
-  if (!variant) {
-    return res.status(400).json({ message: "Biến thể không tồn tại" });
-  }
-
-  price = Number(variant.price);
-  variantKey = { size, color };
-}
-
+      if (!variant) {
+        return res.status(400).json({ message: "Biến thể không tồn tại" });
+      }
+      price = Number(variant.price);
+    }
 
     // 🔄 Kiểm tra item tồn tại trong giỏ
     const existing = cart.items.find(
