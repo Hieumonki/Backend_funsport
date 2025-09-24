@@ -71,7 +71,7 @@ app.use("/v1/orders", orderRoutes);
 app.use("/v1/news", newsRoutes);
 app.use("/v1/cart", cartRoutes);
 app.use("/v1/contact", contactRouter);
-app.use("/v1/bestseller", bestSellerRoute);
+app.use("/v1/bestsellers", require("./routes/bestseller"));
 app.use("/v1/favorites", favoriteRoutes);
 
 // Static uploads

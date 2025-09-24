@@ -241,29 +241,21 @@ const productSellSchema = new mongoose.Schema({
 productSellSchema.plugin(mongoosePaginate);
 
 /* ===== BestSeller Schema ===== */
-const bestSellerSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
+const bestSellerSchema = new mongoose.Schema(
+  {
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product", // trỏ tới bảng products
+      required: true,
+    },
+    count: {
+      type: Number,
+      default: 0, // số lần mua hoặc số lượng bán
+    },
   },
-  image: { type: [String], default: [] }, // ✅ array of string
-  price: {
-    type: Number,
-    min: 0,
-    required: true,
-  },
-  priceold: {
-    type: Number,
-    min: 0,
-  },
-  category: String,
-  tab: String,
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+  { timestamps: true }
+);
+
 
 bestSellerSchema.plugin(mongoosePaginate);
 
