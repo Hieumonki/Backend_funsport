@@ -1,5 +1,6 @@
 const Order = require('../model/order');
-const Product = require('../model/model'); // model sản phẩm
+const { product: Product } = require('../model/product');
+
 
 exports.getStats = async (req, res) => {
   try {
