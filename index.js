@@ -43,7 +43,6 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 /* ===================== Import Routes ===================== */
-const productsellRouter = require("./routes/productsell");
 const authorRouter = require("./routes/author");
 const themeRouter = require("./routes/theme");
 const accountRouter = require("./routes/account");
@@ -53,7 +52,6 @@ const productRouter = require("./routes/product");
 const statsRouter = require("./routes/stats");
 const newsRoutes = require("./routes/news.routes");
 const orderRoutes = require("./routes/order.routes");
-const bestSellerRoute = require("./routes/bestseller");
 const contactRouter = require("./routes/contact");
 const favoriteRoutes = require("./routes/favorite");
 const cartRoutes = require("./routes/cart");
@@ -65,13 +63,11 @@ app.use("/v1/account", accountRouter);
 app.use("/v1/user", userRouter);
 app.use("/v1/category", categoryRouter);
 app.use("/v1/product", productRouter);
-app.use("/v1/productsell", productsellRouter);
 app.use("/v1/stats", statsRouter);
 app.use("/v1/orders", orderRoutes);
 app.use("/v1/news", newsRoutes);
 app.use("/v1/cart", cartRoutes);
 app.use("/v1/contact", contactRouter);
-app.use("/v1/bestsellers", require("./routes/bestseller"));
 app.use("/v1/favorites", favoriteRoutes);
 
 // Static uploads
