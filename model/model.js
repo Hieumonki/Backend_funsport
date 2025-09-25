@@ -214,51 +214,6 @@ const statsSchema = new mongoose.Schema({
 });
 statsSchema.plugin(mongoosePaginate);
 
-/* ===== ProductSell Schema ===== */
-const productSellSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  image: { type: [String], default: [] }, // ✅ array of string
-  price: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  priceold: {
-    type: Number,
-    min: 0,
-  },
-  category: String,
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
-
-productSellSchema.plugin(mongoosePaginate);
-
-/* ===== BestSeller Schema ===== */
-const bestSellerSchema = new mongoose.Schema(
-  {
-    productId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product", // trỏ tới bảng products
-      required: true,
-    },
-    count: {
-      type: Number,
-      default: 0, // số lần mua hoặc số lượng bán
-    },
-  },
-  { timestamps: true }
-);
-
-
-bestSellerSchema.plugin(mongoosePaginate);
-
 /* ===== Export Models ===== */
 module.exports = {
   category: mongoose.model("category", categorySchema),
@@ -268,6 +223,4 @@ module.exports = {
   account: mongoose.model("account", accountSchema),
   news: mongoose.model("news", newsSchema),
   stats: mongoose.model("stats", statsSchema),
-  productsell: mongoose.model("productsell", productSellSchema),
-  bestseller: mongoose.model("bestseller", bestSellerSchema),
 };
