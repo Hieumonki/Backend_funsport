@@ -1,25 +1,31 @@
-const {productsell: productsell } = require('../model/model');
-const order = require('../model/order');                
+const Order = require('../model/order');
+const Product = require('../model/model'); // model sản phẩm
+
 exports.getStats = async (req, res) => {
   try {
-    const orders = await order.find();
+    // Lấy tất cả đơn hàng
+    const orders = await Order.find();
     const totalRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
     const totalOrders = orders.length;
 
-    const totalInventory = await productsell.countDocuments();
+    // Lấy tổng số sản phẩm
+    const totalProducts = await Product.countDocuments();
 
-    // Giả lập tăng trưởng
+    // Giả lập tăng trưởng (có thể thay bằng logic thật)
     const revenueGrowth = 18; // %
     const orderGrowth = 12; // %
+
+    // Tính % đơn hàng trên tổng (orders + products)
     const percentageSold = Math.min(
-      (totalOrders / (totalOrders + totalInventory)) * 100,
+      (totalOrders / (totalOrders + totalProducts)) * 100,
       100
     ).toFixed(2);
 
     res.status(200).json({
       totalRevenue,
       revenueGrowth,
-      totalInventory,
+      totalOrders,
+      totalProducts,
       orderGrowth,
       percentageSold: Number(percentageSold),
     });
